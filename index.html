@@ -254,6 +254,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       </div>
       <div style="margin-top:.75rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <span style="font-size:11px;color:var(--text3);font-family:var(--mono)" id="save-status"></span>
+        <button class="btn btn-green btn-sm" onclick="generarImagen()" id="btn-compartir" style="display:none">
+          🖼 Generar imagen
+        </button>
       </div>
     </div>
   </div>
@@ -524,19 +527,6 @@ function calcularYMostrar(){
   const periodo=document.getElementById('periodo').value;
   if(!periodo){alert('Seleccioná el período antes de calcular.');return;}
 
-  // Bloquear si el período ya existe
-  const existeIdx=historial.findIndex(h=>h.periodo===periodo);
-  if(existeIdx>=0){
-    const[ey,em]=periodo.split('-');
-    const mesesN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    abrirModalCustom({
-      title:'⚠ Período ya calculado',
-      desc:`<strong>${mesesN[parseInt(em)-1]} ${ey}</strong> ya tiene un cálculo guardado.<br><br>Para modificarlo, primero borralo desde la pestaña <strong>Historial</strong> y luego volvé a calcular.`,
-      btns:`<button class="btn btn-accent" onclick="cerrarModal()">Entendido</button>`
-    });
-    return;
-  }
-
   const kwh_total=parseFloat(document.getElementById('kwh_total').value)||0;
   const subtotal_serv=parseFloat(document.getElementById('subtotal_serv').value)||0;
   const subtotal_imp=parseFloat(document.getElementById('subtotal_imp').value)||0;
@@ -590,18 +580,26 @@ function calcularYMostrar(){
   document.getElementById('resultado-wrap').classList.remove('results-hidden');
   document.getElementById('resultado-wrap').scrollIntoView({behavior:'smooth',block:'start'});
 
-  // Guardar
+  // Guardar solo si el período no existe aún
   lastResults={kwh_total,subtotal_serv,subtotal_imp,tasa_ap,kwh_reflec,total_factura,resultados};
   const[year,month]=periodo.split('-');
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const label=meses[parseInt(month)-1]+' '+year;
-  const entrada={periodo,label,...lastResults,fecha_guardado:new Date().toISOString()};
-  historial.unshift(entrada);
 
-  saveHistorial();
-  saveState();
-
-  document.getElementById('save-status').textContent='Guardado el '+new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  const existeIdx=historial.findIndex(h=>h.periodo===periodo);
+  if(existeIdx>=0){
+    document.getElementById('save-status').textContent='';
+    document.getElementById('btn-compartir').style.display='inline-flex';
+    // Mostrar aviso sin modal — solo texto debajo
+    document.getElementById('save-status').innerHTML=`<span style="color:var(--yellow)">⚠ ${label} ya está guardado — borralo del Historial para reemplazarlo.</span>`;
+  } else {
+    const entrada={periodo,label,...lastResults,fecha_guardado:new Date().toISOString()};
+    historial.unshift(entrada);
+    saveHistorial();
+    saveState();
+    document.getElementById('save-status').textContent='Guardado el '+new Date().toLocaleString('es-AR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    document.getElementById('btn-compartir').style.display='inline-flex';
+  }
 }
 
 // ── NUEVO PERÍODO ──
@@ -831,6 +829,188 @@ document.getElementById('install-btn').addEventListener('click',async()=>{if(!de
 const now=new Date();
 document.getElementById('periodo').value=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 loadAll();
+// ── GENERAR IMAGEN ──
+function generarImagen(){
+  if(!lastResults) return;
+  const periodo=document.getElementById('periodo').value;
+  if(!periodo) return;
+  const[year,month]=periodo.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const label=meses[parseInt(month)-1]+' '+year;
+  const{resultados,total_factura,kwh_total,kwh_reflec}=lastResults;
+  const dark=document.documentElement.getAttribute('data-theme')!=='light';
+
+  const PAD=28, ROW=52, HEADER=130, FOOTER=60;
+  const W=480, H=HEADER + resultados.length*ROW + ROW + FOOTER + PAD;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=W*2; canvas.height=H*2;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(2,2);
+
+  const BG     = dark?'#0f172a':'#f0f4f8';
+  const CARD   = dark?'#1e293b':'#ffffff';
+  const BORDER = dark?'rgba(148,163,184,0.15)':'rgba(15,23,42,0.1)';
+  const TEXT   = dark?'#f1f5f9':'#0f172a';
+  const TEXT2  = dark?'#94a3b8':'#475569';
+  const TEXT3  = dark?'#64748b':'#94a3b8';
+  const ACCENT = dark?'#38bdf8':'#0284c7';
+  const STRIPE = dark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.025)';
+  const CASA_COLORS=['#378ADD','#1D9E75','#D85A30','#7F77DD','#BA7517','#D4537E'];
+
+  // fondo
+  ctx.fillStyle=BG;
+  ctx.fillRect(0,0,W,H);
+
+  // tarjeta
+  roundRect(ctx, PAD/2, PAD/2, W-PAD, H-PAD, 12, CARD, BORDER);
+
+  // encabezado
+  ctx.fillStyle=ACCENT;
+  ctx.font='800 13px "Segoe UI",sans-serif';
+  ctx.fillText('⚡ LUZ BARRIO — LA CINACINA', PAD+4, PAD+22);
+
+  ctx.fillStyle=TEXT;
+  ctx.font='700 22px "Segoe UI",sans-serif';
+  ctx.fillText(label, PAD+4, PAD+50);
+
+  ctx.fillStyle=TEXT2;
+  ctx.font='400 12px "Segoe UI",sans-serif';
+  ctx.fillText('Total factura: ', PAD+4, PAD+74);
+  ctx.fillStyle=ACCENT;
+  ctx.font='700 18px "Segoe UI",sans-serif';
+  ctx.fillText(fmt(total_factura), PAD+90, PAD+74);
+
+  ctx.fillStyle=TEXT3;
+  ctx.font='400 11px "Segoe UI",sans-serif';
+  ctx.fillText(`${kwh_total} kWh facturados · ${kwh_reflec.toFixed(1)} kWh reflectores`, PAD+4, PAD+94);
+
+  // línea separadora
+  ctx.strokeStyle=BORDER;
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, HEADER-8);
+  ctx.lineTo(W-PAD, HEADER-8);
+  ctx.stroke();
+
+  // columnas header
+  ctx.fillStyle=TEXT3;
+  ctx.font='600 10px "Segoe UI",sans-serif';
+  const cols=[
+    {label:'CASA',    x:PAD+4,   align:'left'},
+    {label:'kWh',     x:200,     align:'right'},
+    {label:'%',       x:250,     align:'right'},
+    {label:'TOTAL',   x:W-PAD-4, align:'right'},
+  ];
+  cols.forEach(c=>{
+    ctx.textAlign=c.align;
+    ctx.fillText(c.label, c.x, HEADER+2);
+  });
+  ctx.textAlign='left';
+
+  // filas
+  resultados.forEach((r,i)=>{
+    const y=HEADER+ROW*(i+0.5)+10;
+    const rowY=HEADER+ROW*i+12;
+
+    // stripe alternada
+    if(i%2===0){
+      ctx.fillStyle=STRIPE;
+      ctx.fillRect(PAD+1, rowY, W-PAD*2-2, ROW-2);
+    }
+
+    // dot de color
+    ctx.fillStyle=CASA_COLORS[i%CASA_COLORS.length];
+    ctx.beginPath();
+    ctx.arc(PAD+12, y+4, 5, 0, Math.PI*2);
+    ctx.fill();
+
+    // nombre
+    ctx.fillStyle=TEXT;
+    ctx.font='600 14px "Segoe UI",sans-serif';
+    ctx.textAlign='left';
+    ctx.fillText(r.nombre, PAD+24, y+6);
+
+    // kwh
+    ctx.fillStyle=TEXT2;
+    ctx.font='400 13px "Segoe UI",monospace';
+    ctx.textAlign='right';
+    ctx.fillText(r.kwh.toFixed(1), 200, y+6);
+
+    // pct
+    ctx.fillStyle=TEXT3;
+    ctx.font='400 12px "Segoe UI",monospace';
+    ctx.fillText((r.pct*100).toFixed(1)+'%', 250, y+6);
+
+    // total
+    ctx.fillStyle=ACCENT;
+    ctx.font='700 15px "Segoe UI",monospace';
+    ctx.fillText(fmt(r.total), W-PAD-4, y+6);
+
+    // desglose pequeño
+    ctx.fillStyle=TEXT3;
+    ctx.font='400 10px "Segoe UI",sans-serif';
+    ctx.fillText(`Fijo ${fmt(r.cargo_fijo)} · Variable ${fmt(r.var_cost)} · Reflec. ${fmt(r.reflec)}`, PAD+24, y+22);
+  });
+
+  // línea antes del total
+  const totalY=HEADER+ROW*resultados.length+12;
+  ctx.strokeStyle=BORDER;
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.moveTo(PAD, totalY-4);
+  ctx.lineTo(W-PAD, totalY-4);
+  ctx.stroke();
+
+  // fila total
+  ctx.fillStyle=TEXT;
+  ctx.font='700 13px "Segoe UI",sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText('TOTAL FACTURA', PAD+4, totalY+16);
+  ctx.fillStyle=ACCENT;
+  ctx.font='800 16px "Segoe UI",monospace';
+  ctx.textAlign='right';
+  ctx.fillText(fmt(total_factura), W-PAD-4, totalY+16);
+
+  // footer
+  ctx.fillStyle=TEXT3;
+  ctx.font='400 10px "Segoe UI",sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('Barrio La Cinacina · generado con Luz Barrio · Alejo De Antoni', W/2, H-PAD/2-4);
+
+  ctx.textAlign='left';
+
+  // descargar / compartir
+  canvas.toBlob(blob=>{
+    const url=URL.createObjectURL(blob);
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob],'luz-'+periodo+'.png',{type:'image/png'})]})){
+      navigator.share({
+        title:'Luz Barrio — '+label,
+        files:[new File([blob],'luz-'+periodo+'.png',{type:'image/png'})]
+      }).catch(()=>{});
+    } else {
+      const a=document.createElement('a');
+      a.href=url;
+      a.download='luz-'+periodo+'.png';
+      a.click();
+    }
+    setTimeout(()=>URL.revokeObjectURL(url),5000);
+  },'image/png');
+}
+
+function roundRect(ctx,x,y,w,h,r,fill,stroke){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+  if(fill){ctx.fillStyle=fill;ctx.fill();}
+  if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+}
+
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 </script>
 </body>

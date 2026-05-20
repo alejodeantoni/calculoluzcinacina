@@ -415,9 +415,10 @@ async function jbinLoad(){
 async function jbinSave(data){
   const key=JBIN_KEY||lsGet(LS_JBIN_KEY);if(!key)return false;
   const binId=JBIN_BIN||lsGet(LS_JBIN_BINID);
+  if(!binId)return false;
   try{
-    if(!binId){const r=await fetch('https://api.jsonbin.io/v3/b',{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'luz-barrio'},body:JSON.stringify({historial:data})});if(!r.ok)return false;const d=await r.json();lsSet(LS_JBIN_BINID,d.metadata.id);return true;}
-    else{const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':key},body:JSON.stringify({historial:data})});return r.ok;}
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${binId}`,{method:'PUT',headers:{'Content-Type':'application/json','X-Master-Key':key},body:JSON.stringify({historial:data})});
+    return r.ok;
   }catch(e){return false;}
 }
 
@@ -815,9 +816,14 @@ function buildRanking(sorted){
 // ── JSONBIN CONFIG ──
 function saveJBinConfig(){const key=document.getElementById('jbin-key').value.trim();const binId=document.getElementById('jbin-binid').value.trim();lsSet(LS_JBIN_KEY,key);if(binId)lsSet(LS_JBIN_BINID,binId);showJBinStatus('ok','✓ Guardado');}
 async function testJBin(){
-  const key=document.getElementById('jbin-key').value.trim();if(!key){showJBinStatus('err','⚠ Ingresá el API Key');return;}
+  const key=document.getElementById('jbin-key').value.trim()||JBIN_KEY;
+  if(!key){showJBinStatus('err','⚠ Sin API Key');return;}
   showJBinStatus('pending','⟳ Probando...');
-  try{const r=await fetch('https://api.jsonbin.io/v3/b',{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'luz-barrio-test'},body:JSON.stringify({test:true})});if(r.ok){const d=await r.json();lsSet(LS_JBIN_KEY,key);lsSet(LS_JBIN_BINID,d.metadata.id);document.getElementById('jbin-binid').value=d.metadata.id;showJBinStatus('ok','✓ Conexión OK');}else showJBinStatus('err','✗ API Key inválido');}catch(e){showJBinStatus('err','✗ Sin conexión');}
+  try{
+    const r=await fetch(`https://api.jsonbin.io/v3/b/${JBIN_BIN}/latest`,{headers:{'X-Master-Key':key,'X-Bin-Meta':'false'}});
+    if(r.ok){showJBinStatus('ok','✓ Conexión OK');}
+    else showJBinStatus('err','✗ Error: '+r.status);
+  }catch(e){showJBinStatus('err','✗ Sin conexión');}
 }
 function showJBinStatus(type,msg){const el=document.getElementById('jbin-status');el.textContent=msg;el.className='jbin-status '+(type==='ok'?'jbin-ok':type==='err'?'jbin-err':'jbin-pending');el.style.display='inline-flex';if(type!=='pending')setTimeout(()=>el.style.display='none',3000);}
 

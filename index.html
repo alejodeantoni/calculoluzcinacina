@@ -524,6 +524,19 @@ function calcularYMostrar(){
   const periodo=document.getElementById('periodo').value;
   if(!periodo){alert('Seleccioná el período antes de calcular.');return;}
 
+  // Bloquear si el período ya existe
+  const existeIdx=historial.findIndex(h=>h.periodo===periodo);
+  if(existeIdx>=0){
+    const[ey,em]=periodo.split('-');
+    const mesesN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    abrirModalCustom({
+      title:'⚠ Período ya calculado',
+      desc:`<strong>${mesesN[parseInt(em)-1]} ${ey}</strong> ya tiene un cálculo guardado.<br><br>Para modificarlo, primero borralo desde la pestaña <strong>Historial</strong> y luego volvé a calcular.`,
+      btns:`<button class="btn btn-accent" onclick="cerrarModal()">Entendido</button>`
+    });
+    return;
+  }
+
   const kwh_total=parseFloat(document.getElementById('kwh_total').value)||0;
   const subtotal_serv=parseFloat(document.getElementById('subtotal_serv').value)||0;
   const subtotal_imp=parseFloat(document.getElementById('subtotal_imp').value)||0;
@@ -583,8 +596,7 @@ function calcularYMostrar(){
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const label=meses[parseInt(month)-1]+' '+year;
   const entrada={periodo,label,...lastResults,fecha_guardado:new Date().toISOString()};
-  const idx=historial.findIndex(h=>h.periodo===periodo);
-  if(idx>=0)historial[idx]=entrada;else historial.unshift(entrada);
+  historial.unshift(entrada);
 
   saveHistorial();
   saveState();

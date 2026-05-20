@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" id="theme-color-meta" content="#0f172a">
+<meta name="description" content="Calculadora de luz para el barrio La Cinacina">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Luz Barrio">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<title>Luz Barrio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── VARIABLES ── */
+:root {
+  --app-version: "v2.0.0";
+  --bg: #0f172a;
+  --bg2: #1e293b;
+  --bg3: #273449;
+  --surface: #1e293b;
+  --surface2: #273449;
+  --border: rgba(148,163,184,0.12);
+  --border2: rgba(148,163,184,0.22);
+  --text: #f1f5f9;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --accent: #38bdf8;
+  --accent2: #0ea5e9;
+  --accent-bg: rgba(56,189,248,0.1);
+  --green: #34d399;
+  --green-bg: rgba(52,211,153,0.1);
+  --red: #f87171;
+  --red-bg: rgba(248,113,113,0.1);
+  --yellow: #fbbf24;
+  --yellow-bg: rgba(251,191,36,0.1);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --font: 'Syne', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+[data-theme="light"] {
+  --bg: #f0f4f8;
+  --bg2: #ffffff;
+  --bg3: #e8eef5;
+  --surface: #ffffff;
+  --surface2: #f0f4f8;
+  --border: rgba(15,23,42,0.08);
+  --border2: rgba(15,23,42,0.16);
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --accent: #0284c7;
+  --accent2: #0369a1;
+  --accent-bg: rgba(2,132,199,0.08);
+  --green: #059669;
+  --green-bg: rgba(5,150,105,0.08);
+  --red: #dc2626;
+  --red-bg: rgba(220,38,38,0.08);
+  --yellow: #d97706;
+  --yellow-bg: rgba(217,119,6,0.08);
+  --shadow: 0 4px 24px rgba(15,23,42,0.1);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--font);
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  transition:background .3s,color .3s;
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:0 1rem;
+  height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  backdrop-filter:blur(12px);
+}
+.topbar-left{display:flex;align-items:center;gap:10px}
+.app-logo{
+  width:28px;height:28px;
+  background:var(--accent);
+  border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:800;color:#0f172a;
+  font-family:var(--mono);
+}
+.app-title{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.app-version{
+  font-size:10px;font-family:var(--mono);
+  color:var(--text3);
+  background:var(--surface2);
+  padding:2px 6px;border-radius:4px;
+  border:1px solid var(--border);
+}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.theme-btn{
+  width:32px;height:32px;border-radius:var(--radius-sm);
+  border:1px solid var(--border2);
+  background:var(--surface2);
+  color:var(--text2);
+  cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+.theme-btn:hover{background:var(--bg3);color:var(--text)}
+.sync-indicator{
+  font-size:10px;font-family:var(--mono);
+  padding:3px 8px;border-radius:4px;
+  display:flex;align-items:center;gap:4px;
+  background:var(--green-bg);color:var(--green);
+  border:1px solid rgba(52,211,153,0.2);
+  opacity:0;transition:opacity .4s;
+}
+.sync-indicator.show{opacity:1}
+.sync-indicator.syncing{background:var(--yellow-bg);color:var(--yellow);border-color:rgba(251,191,36,.2)}
+.sync-indicator.error{background:var(--red-bg);color:var(--red);border-color:rgba(248,113,113,.2)}
+
+/* ── TABS ── */
+.tabs{
+  display:flex;
+  border-bottom:1px solid var(--border);
+  background:var(--bg);
+  padding:0 1rem;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  padding:12px 16px;
+  font-size:13px;font-weight:600;font-family:var(--font);
+  color:var(--text3);
+  background:none;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;
+  white-space:nowrap;
+  transition:color .2s,border-color .2s;
+}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-btn:hover:not(.active){color:var(--text2)}
+.tab-pane{display:none;padding:1rem;max-width:900px;margin:0 auto}
+.tab-pane.active{display:block}
+
+/* ── CARDS ── */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  margin-bottom:1rem;
+  transition:background .3s,border-color .3s;
+}
+.card-title{
+  font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:1rem;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.card-title-left{display:flex;align-items:center;gap:8px}
+
+/* ── GRID ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:600px){.g3{grid-template-columns:1fr 1fr}.g2{grid-template-columns:1fr}}
+
+/* ── FORM ELEMENTS ── */
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--text3)}
+.field input,.field select{
+  padding:8px 10px;
+  border:1px solid var(--border2);
+  border-radius:var(--radius-sm);
+  background:var(--bg3);
+  color:var(--text);
+  font-size:14px;font-family:var(--mono);
+  transition:border-color .2s,background .3s;
+  width:100%;
+}
+.field input:focus,.field select:focus{outline:none;border-color:var(--accent)}
+.field input[readonly]{background:var(--bg2);color:var(--text3);cursor:default}
+.hint{font-size:10px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+
+/* ── CASAS TABLE ── */
+.casas-header,.casa-row{
+  display:grid;
+  grid-template-columns:110px 1fr 1fr 80px 60px;
+  gap:8px;align-items:center;
+  padding:4px 0;
+}
+.casas-header span{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)}
+.casa-name{font-size:13px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.casa-consumo{font-size:13px;font-family:var(--mono);font-weight:500;color:var(--text2)}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:3px 7px;border-radius:4px}
+.badge-ok{background:var(--green-bg);color:var(--green)}
+.badge-warn{background:var(--yellow-bg);color:var(--yellow)}
+.casa-input{
+  padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);
+  background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--mono);width:100%;
+  transition:border-color .2s;
+}
+.casa-input:focus{outline:none;border-color:var(--accent)}
+.casa-input.readonly{background:var(--bg2);color:var(--text3)}
+@media(max-width:600px){
+  .casas-header,.casa-row{grid-template-columns:80px 1fr 1fr 70px 50px;gap:5px}
+  .casas-header span:nth-child(2),.casas-header span:nth-child(3){font-size:9px}
+}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem}
+.metric{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:.75rem 1rem;
+}
+.metric-label{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.metric-value{font-size:20px;font-weight:700;font-family:var(--mono);color:var(--text)}
+.metric-value.accent{color:var(--accent)}
+
+/* ── RESULTS TABLE ── */
+.rtable-wrap{overflow-x:auto}
+.rtable{width:100%;border-collapse:collapse;font-size:13px;min-width:600px}
+.rtable th{
+  text-align:left;padding:8px 10px;
+  font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);
+  border-bottom:1px solid var(--border2);
+}
+.rtable td{padding:8px 10px;border-bottom:1px solid var(--border);font-family:var(--mono)}
+.rtable td.r{text-align:right}
+.rtable td.name{font-family:var(--font);font-weight:600;font-size:13px}
+.rtable td.total{text-align:right;font-weight:700;color:var(--accent)}
+.rtable tr.subtotal td{color:var(--text3);font-size:12px}
+.rtable tr.grand td{background:var(--surface2);font-weight:700}
+.rtable tr:last-child td{border-bottom:none}
+
+/* ── BUTTONS ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 14px;border-radius:var(--radius-sm);
+  font-size:13px;font-weight:600;font-family:var(--font);
+  border:1px solid var(--border2);
+  background:var(--surface2);color:var(--text2);
+  cursor:pointer;transition:all .2s;
+}
+.btn:hover{background:var(--bg3);color:var(--text);border-color:var(--border2)}
+.btn:active{transform:scale(.98)}
+.btn-accent{background:var(--accent-bg);color:var(--accent);border-color:rgba(56,189,248,.3)}
+.btn-accent:hover{background:var(--accent);color:#0f172a}
+.btn-green{background:var(--green-bg);color:var(--green);border-color:rgba(52,211,153,.3)}
+.btn-green:hover{background:var(--green);color:#0f172a}
+.btn-red{background:var(--red-bg);color:var(--red);border-color:rgba(248,113,113,.3)}
+.btn-red:hover{background:var(--red);color:#fff}
+.btn-yellow{background:var(--yellow-bg);color:var(--yellow);border-color:rgba(251,191,36,.3)}
+.btn-yellow:hover{background:var(--yellow);color:#0f172a}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-full{width:100%;justify-content:center}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:.75rem}
+
+/* ── HISTORIAL ── */
+.hist-item{
+  border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:8px;overflow:hidden;
+}
+.hist-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;cursor:pointer;
+  background:var(--surface2);
+  transition:background .2s;
+}
+.hist-head:hover{background:var(--bg3)}
+.hist-head-left{display:flex;align-items:center;gap:10px}
+.hist-period{font-size:14px;font-weight:700}
+.hist-meta{font-size:12px;color:var(--text3);font-family:var(--mono)}
+.hist-chevron{font-size:14px;color:var(--text3);transition:transform .25s}
+.hist-chevron.open{transform:rotate(180deg)}
+.hist-body{display:none;padding:12px 14px;border-top:1px solid var(--border)}
+.hist-body.open{display:block}
+.empty-state{
+  text-align:center;padding:3rem 1rem;
+  color:var(--text3);font-size:13px;
+}
+.empty-icon{font-size:32px;margin-bottom:.5rem;opacity:.4}
+
+/* ── MODAL ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center;
+  padding:1rem;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.open{display:flex}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border2);
+  border-radius:var(--radius);padding:1.5rem;
+  width:100%;max-width:340px;
+  box-shadow:var(--shadow);
+}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:.25rem}
+.modal-desc{font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.5}
+.modal-input{
+  width:100%;padding:9px 11px;
+  border:1px solid var(--border2);border-radius:var(--radius-sm);
+  background:var(--bg3);color:var(--text);
+  font-size:14px;font-family:var(--mono);
+  margin-bottom:8px;
+}
+.modal-input:focus{outline:none;border-color:var(--accent)}
+.modal-err{font-size:12px;color:var(--red);min-height:16px;margin-bottom:8px;font-family:var(--mono)}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end}
+
+/* ── FOOTER ── */
+.footer{
+  text-align:center;padding:2rem 1rem 1.5rem;
+  color:var(--text3);font-size:11px;
+  font-family:var(--mono);
+  border-top:1px solid var(--border);
+  margin-top:1rem;
+}
+.footer strong{color:var(--text2)}
+
+/* ── JSONBIN CONFIG ── */
+.jbin-status{
+  font-size:11px;font-family:var(--mono);
+  padding:4px 8px;border-radius:4px;
+  display:inline-flex;align-items:center;gap:4px;
+}
+.jbin-ok{background:var(--green-bg);color:var(--green)}
+.jbin-err{background:var(--red-bg);color:var(--red)}
+.jbin-pending{background:var(--yellow-bg);color:var(--yellow)}
+
+/* ── INSTALL BANNER ── */
+#install-banner{
+  display:none;
+  background:var(--accent-bg);border-bottom:1px solid rgba(56,189,248,.2);
+  padding:10px 1rem;
+  align-items:center;justify-content:space-between;gap:10px;
+  font-size:13px;
+}
+#install-banner.show{display:flex}
+#install-banner p{color:var(--accent)}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.tab-pane.active{animation:fadeIn .2s ease}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
+</style>
+</head>
+<body>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <p>📲 Instalá la app en tu celular para usarla sin internet.</p>
+  <button class="btn btn-accent btn-sm" id="install-btn">Instalar</button>
+</div>
+
+<!-- Topbar -->
+<header class="topbar">
+  <div class="topbar-left">
+    <div class="app-logo">⚡</div>
+    <span class="app-title">Luz Barrio</span>
+    <span class="app-version" id="version-badge">v2.0.0</span>
+  </div>
+  <div class="topbar-right">
+    <span class="sync-indicator" id="sync-indicator">✓ guardado</span>
+    <button class="theme-btn" id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()">🌙</button>
+  </div>
+</header>
+
+<!-- Tabs -->
+<nav class="tabs">
+  <button class="tab-btn active" onclick="showTab('calcular',this)">Calcular</button>
+  <button class="tab-btn" onclick="showTab('historial',this)">Historial</button>
+  <button class="tab-btn" onclick="showTab('config',this)">Configuración</button>
+</nav>
+
+<!-- ══ TAB: CALCULAR ══ -->
+<div class="tab-pane active" id="tab-calcular">
+
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-left">⚡ Factura EDELAP</div>
+      <button class="btn btn-green btn-sm" onclick="iniciarNuevoPeriodo()">↗ Nuevo período</button>
+    </div>
+    <div style="margin-bottom:12px">
+      <div class="field" style="max-width:180px">
+        <label>Período</label>
+        <input type="month" id="periodo" onchange="calcular()">
+      </div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div class="field"><label>Energía activa (kWh)</label><input type="number" id="kwh_total" value="2411" oninput="calcular()"></div>
+      <div class="field"><label>Subtotal servicio ($)</label><input type="number" id="subtotal_serv" value="700044.70" oninput="calcular()"></div>
+      <div class="field"><label>Subtotal impuestos ($)</label><input type="number" id="subtotal_imp" value="314887.67" oninput="calcular()"></div>
+    </div>
+    <div class="g2">
+      <div class="field"><label>Alumbrado público ($)</label><input type="number" id="tasa_ap" value="6480" oninput="calcular()"></div>
+      <div class="field">
+        <label>Reflectores + portón (kWh)</label>
+        <input type="number" id="kwh_reflec" readonly>
+        <span class="hint">← activa − suma de casas</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏠 Medidores por casa</div>
+    <div class="casas-header">
+      <span>Casa</span><span>Lect. anterior</span><span>Lect. actual</span><span>Consumo</span><span>Estado</span>
+    </div>
+    <div id="casas-rows"></div>
+    <div style="display:flex;justify-content:flex-end;gap:16px;margin-top:8px">
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Casas: <strong id="kwh_medido" style="color:var(--text2)">0</strong> kWh</span>
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Reflectores: <strong id="reflec_display" style="color:var(--text2)">0</strong> kWh</span>
+    </div>
+  </div>
+
+  <div class="metrics" id="metric-cards"></div>
+
+  <div class="card">
+    <div class="card-title">💰 Lo que paga cada uno</div>
+    <div class="rtable-wrap">
+      <table class="rtable">
+        <thead>
+          <tr>
+            <th>Casa</th><th class="r">kWh</th><th class="r">%</th>
+            <th class="r">Cargo fijo</th><th class="r">Variable</th>
+            <th class="r">Alumbrado</th><th class="r">Reflectores</th>
+            <th class="r">TOTAL</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-resultados"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="justify-content:flex-end">
+      <div id="save-status" style="font-size:11px;color:var(--text3);font-family:var(--mono)"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ TAB: HISTORIAL ══ -->
+<div class="tab-pane" id="tab-historial">
+  <div class="card">
+    <div class="card-title">
+      <div class="card-title-left">📋 Historial de períodos</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-yellow btn-sm" onclick="abrirModal('cambiar_pass')">🔑 Contraseña</button>
+        <button class="btn btn-red btn-sm" onclick="abrirModal('borrar_todo')">🗑 Borrar todo</button>
+      </div>
+    </div>
+    <div id="historial-container"></div>
+  </div>
+</div>
+
+<!-- ══ TAB: CONFIGURACIÓN ══ -->
+<div class="tab-pane" id="tab-config">
+  <div class="card">
+    <div class="card-title">☁️ Almacenamiento JSONBin</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">
+      Guardá el historial en la nube con JSONBin.io. Creá una cuenta gratis en <strong>jsonbin.io</strong>, generá un API Key y pegalo acá. El historial se va a sincronizar en todos tus dispositivos.
+    </p>
+    <div class="field" style="margin-bottom:10px">
+      <label>API Key de JSONBin</label>
+      <input type="password" id="jbin-key" placeholder="$2a$10$...">
+    </div>
+    <div class="field" style="margin-bottom:10px">
+      <label>Bin ID (dejar vacío para crear uno nuevo)</label>
+      <input type="text" id="jbin-binid" placeholder="Se completa automáticamente al guardar">
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-accent" onclick="testJBin()">Probar conexión</button>
+      <button class="btn btn-green" onclick="saveJBinConfig()">Guardar configuración</button>
+      <span id="jbin-status" class="jbin-status" style="display:none"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🎨 Apariencia</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" id="btn-dark" onclick="setTheme('dark')">🌙 Tema oscuro</button>
+      <button class="btn" id="btn-light" onclick="setTheme('light')">☀️ Tema claro</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">ℹ️ Acerca de</div>
+    <div style="font-size:13px;color:var(--text2);line-height:2;font-family:var(--mono)">
+      <div>Versión: <strong id="about-version" style="color:var(--text)">v2.0.0</strong></div>
+      <div>Aplicación: <strong style="color:var(--text)">Calculadora de Luz — Barrio La Cinacina</strong></div>
+      <div>Creada por: <strong style="color:var(--accent)">Alejo De Antoni</strong></div>
+      <div>Tecnología: <strong style="color:var(--text)">PWA · HTML · CSS · JS</strong></div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div>Creada por <strong>Alejo De Antoni</strong> · <span id="footer-version">v2.0.0</span></div>
+  <div style="margin-top:4px;color:var(--text3)">Barrio La Cinacina · La Plata</div>
+</footer>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal-box" id="modal-box"></div>
+</div>
+
+<script>
+// ── VERSION ──
+const APP_VERSION = 'v2.0.0';
+document.querySelectorAll('[id$="version"], [id$="version-badge"], #about-version, #footer-version').forEach(el=>{
+  if(el) el.textContent = APP_VERSION;
+});
+document.getElementById('version-badge').textContent = APP_VERSION;
+document.getElementById('about-version').textContent = APP_VERSION;
+document.getElementById('footer-version').textContent = APP_VERSION;
+
+// ── DATA ──
+const CASAS = [
+  {nombre:'ALEJO',ant:4970.6,act:5318.7},
+  {nombre:'ANA',ant:11361.9,act:11827.4},
+  {nombre:'DANA',ant:4371,act:4620.4},
+  {nombre:'FER',ant:10457.8,act:11011},
+  {nombre:'JOSE',ant:5550.7,act:5891.81},
+  {nombre:'MARIANA',ant:0,act:0},
+];
+
+const LS_HIST = 'lb_historial';
+const LS_STATE = 'lb_state';
+const LS_PASS = 'lb_pass';
+const LS_THEME = 'lb_theme';
+const LS_JBIN_KEY = 'lb_jbin_key';
+const LS_JBIN_BINID = 'lb_jbin_binid';
+const DEFAULT_PASS = 'barrio123';
+
+let historial = [];
+let lastResults = null;
+let autosaveTimer = null;
+let pendingModal = null;
+let deferredInstall = null;
+
+// ── THEME ──
+function setTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem(LS_THEME, t);
+  document.getElementById('theme-toggle').textContent = t === 'dark' ? '🌙' : '☀️';
+  document.getElementById('theme-color-meta').content = t === 'dark' ? '#0f172a' : '#f0f4f8';
+  document.getElementById('btn-dark').classList.toggle('btn-accent', t==='dark');
+  document.getElementById('btn-light').classList.toggle('btn-accent', t==='light');
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+}
+const savedTheme = localStorage.getItem(LS_THEME) || 'dark';
+setTheme(savedTheme);
+
+// ── TABS ──
+function showTab(name, btn){
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='historial') renderHistorial();
+}
+
+// ── STORAGE: localStorage + JSONBin ──
+function lsGet(key){ try{return localStorage.getItem(key);}catch(e){return null;} }
+function lsSet(key,val){ try{localStorage.setItem(key,val);}catch(e){} }
+function getPass(){ return lsGet(LS_PASS) || DEFAULT_PASS; }
+function setPass(p){ lsSet(LS_PASS, p); }
+
+async function jbinLoad(){
+  const key = lsGet(LS_JBIN_KEY);
+  const binId = lsGet(LS_JBIN_BINID);
+  if(!key || !binId) return null;
+  try{
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`,{
+      headers:{'X-Master-Key':key,'X-Bin-Meta':'false'}
+    });
+    if(!r.ok) return null;
+    const d = await r.json();
+    return d.historial || null;
+  }catch(e){ return null; }
+}
+
+async function jbinSave(data){
+  const key = lsGet(LS_JBIN_KEY);
+  if(!key) return false;
+  let binId = lsGet(LS_JBIN_BINID);
+  try{
+    if(!binId){
+      const r = await fetch('https://api.jsonbin.io/v3/b',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'luz-barrio'},
+        body:JSON.stringify({historial:data})
+      });
+      if(!r.ok) return false;
+      const d = await r.json();
+      binId = d.metadata.id;
+      lsSet(LS_JBIN_BINID, binId);
+      document.getElementById('jbin-binid').value = binId;
+      return true;
+    } else {
+      const r = await fetch(`https://api.jsonbin.io/v3/b/${binId}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json','X-Master-Key':key},
+        body:JSON.stringify({historial:data})
+      });
+      return r.ok;
+    }
+  }catch(e){ return false; }
+}
+
+function saveHistorial(){
+  lsSet(LS_HIST, JSON.stringify(historial));
+  showSync('syncing','⟳ guardando...');
+  jbinSave(historial).then(ok=>{
+    showSync(ok ? 'ok' : 'ok', ok ? '✓ guardado' : '✓ local');
+    setTimeout(()=>hideSync(), 2500);
+  });
+}
+
+function saveState(){
+  const st = {
+    periodo: document.getElementById('periodo').value,
+    kwh_total: document.getElementById('kwh_total').value,
+    subtotal_serv: document.getElementById('subtotal_serv').value,
+    subtotal_imp: document.getElementById('subtotal_imp').value,
+    tasa_ap: document.getElementById('tasa_ap').value,
+    casas: CASAS.map(c=>({ant:c.ant,act:c.act}))
+  };
+  lsSet(LS_STATE, JSON.stringify(st));
+}
+
+function showSync(type, msg){
+  const el = document.getElementById('sync-indicator');
+  el.textContent = msg;
+  el.className = 'sync-indicator show ' + (type==='syncing'?'syncing':type==='error'?'error':'');
+}
+function hideSync(){ document.getElementById('sync-indicator').classList.remove('show'); }
+
+async function loadAll(){
+  // Cargar historial: primero JSONBin, fallback localStorage
+  const jbinData = await jbinLoad();
+  if(jbinData){
+    historial = jbinData;
+    lsSet(LS_HIST, JSON.stringify(historial));
+  } else {
+    const local = lsGet(LS_HIST);
+    if(local) historial = JSON.parse(local);
+  }
+
+  // Cargar estado del formulario
+  const stRaw = lsGet(LS_STATE);
+  if(stRaw){
+    const st = JSON.parse(stRaw);
+    if(st.periodo) document.getElementById('periodo').value = st.periodo;
+    if(st.kwh_total) document.getElementById('kwh_total').value = st.kwh_total;
+    if(st.subtotal_serv) document.getElementById('subtotal_serv').value = st.subtotal_serv;
+    if(st.subtotal_imp) document.getElementById('subtotal_imp').value = st.subtotal_imp;
+    if(st.tasa_ap) document.getElementById('tasa_ap').value = st.tasa_ap;
+    if(st.casas) st.casas.forEach((c,i)=>{CASAS[i].ant=c.ant;CASAS[i].act=c.act;});
+  }
+
+  // Cargar config JSONBin
+  const jkey = lsGet(LS_JBIN_KEY);
+  const jbid = lsGet(LS_JBIN_BINID);
+  if(jkey) document.getElementById('jbin-key').value = jkey;
+  if(jbid) document.getElementById('jbin-binid').value = jbid;
+
+  renderCasas();
+  calcular();
+}
+
+// ── RENDER CASAS ──
+function renderCasas(){
+  const cont = document.getElementById('casas-rows');
+  cont.innerHTML = '';
+  CASAS.forEach((c,i)=>{
+    const consumo = Math.max(0, c.act - c.ant);
+    const ok = c.act >= c.ant;
+    const row = document.createElement('div');
+    row.className = 'casa-row';
+    row.innerHTML = `
+      <span class="casa-name">${c.nombre}</span>
+      <input class="casa-input readonly" type="number" value="${c.ant}" readonly tabindex="-1">
+      <input class="casa-input" id="act-${i}" type="number" value="${c.act}" oninput="updateCasa(${i},this.value)">
+      <span class="casa-consumo">${consumo.toFixed(1)}</span>
+      <span class="badge ${ok?'badge-ok':'badge-warn'}">${ok?'OK':'⚠'}</span>
+    `;
+    cont.appendChild(row);
+  });
+}
+
+function updateCasa(i, val){
+  CASAS[i].act = parseFloat(val)||0;
+  calcular();
+  scheduleAutosave();
+}
+
+// ── CALCULAR ──
+function fmt(n){ return '$'+Math.round(n).toLocaleString('es-AR'); }
+
+function calcular(){
+  const kwh_total = parseFloat(document.getElementById('kwh_total').value)||0;
+  const subtotal_serv = parseFloat(document.getElementById('subtotal_serv').value)||0;
+  const subtotal_imp = parseFloat(document.getElementById('subtotal_imp').value)||0;
+  const tasa_ap = parseFloat(document.getElementById('tasa_ap').value)||0;
+  const n = CASAS.length;
+
+  const consumos = CASAS.map(c=>Math.max(0,c.act-c.ant));
+  const kwh_casas = consumos.reduce((a,b)=>a+b,0);
+  const kwh_reflec = Math.max(0, kwh_total - kwh_casas);
+
+  document.getElementById('kwh_reflec').value = kwh_reflec.toFixed(2);
+  document.getElementById('kwh_medido').textContent = kwh_casas.toFixed(1);
+  document.getElementById('reflec_display').textContent = kwh_reflec.toFixed(1);
+
+  const total_factura = subtotal_serv + subtotal_imp + tasa_ap;
+  const cargo_fijo_por_casa = subtotal_imp / n;
+  const tasa_ap_por_casa = tasa_ap / n;
+  const costo_reflec_por_casa = (subtotal_serv * (kwh_reflec / (kwh_total||1))) / n;
+
+  const tbody = document.getElementById('tabla-resultados');
+  tbody.innerHTML = '';
+  const resultados = [];
+
+  CASAS.forEach((c,i)=>{
+    const kwh = consumos[i];
+    const pct = kwh_total > 0 ? kwh / kwh_total : 0;
+    const var_cost = subtotal_serv * pct;
+    const total = cargo_fijo_por_casa + var_cost + tasa_ap_por_casa + costo_reflec_por_casa;
+    resultados.push({nombre:c.nombre,kwh,pct,var_cost,cargo_fijo:cargo_fijo_por_casa,tasa_ap:tasa_ap_por_casa,reflec:costo_reflec_por_casa,total});
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="name">${c.nombre}</td>
+      <td class="r">${kwh.toFixed(1)}</td>
+      <td class="r" style="color:var(--text3)">${(pct*100).toFixed(1)}%</td>
+      <td class="r">${fmt(cargo_fijo_por_casa)}</td>
+      <td class="r">${fmt(var_cost)}</td>
+      <td class="r">${fmt(tasa_ap_por_casa)}</td>
+      <td class="r">${fmt(costo_reflec_por_casa)}</td>
+      <td class="total">${fmt(total)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  const reflec_cost = subtotal_serv * (kwh_reflec / (kwh_total||1));
+  const rr = document.createElement('tr');
+  rr.className = 'subtotal';
+  rr.innerHTML = `
+    <td class="name" style="color:var(--text3)">Reflectores</td>
+    <td class="r">${kwh_reflec.toFixed(1)}</td>
+    <td class="r">${kwh_total>0?(kwh_reflec/kwh_total*100).toFixed(1):0}%</td>
+    <td class="r">—</td><td class="r">${fmt(reflec_cost)}</td>
+    <td class="r">—</td><td class="r">—</td><td class="r">—</td>
+  `;
+  tbody.appendChild(rr);
+
+  const tr2 = document.createElement('tr');
+  tr2.className = 'grand';
+  tr2.innerHTML = `
+    <td class="name">TOTALES</td>
+    <td class="r">${kwh_total.toFixed(1)}</td><td class="r">100%</td>
+    <td class="r">${fmt(subtotal_imp)}</td><td class="r">${fmt(subtotal_serv)}</td>
+    <td class="r">${fmt(tasa_ap)}</td><td class="r">—</td>
+    <td class="total">${fmt(total_factura)}</td>
+  `;
+  tbody.appendChild(tr2);
+
+  document.getElementById('metric-cards').innerHTML = `
+    <div class="metric"><div class="metric-label">Total factura</div><div class="metric-value accent">${fmt(total_factura)}</div></div>
+    <div class="metric"><div class="metric-label">kWh factura</div><div class="metric-value">${kwh_total.toLocaleString('es-AR')}</div></div>
+    <div class="metric"><div class="metric-label">Suma casas</div><div class="metric-value">${kwh_casas.toFixed(1)} kWh</div></div>
+    <div class="metric"><div class="metric-label">Reflectores</div><div class="metric-value">${kwh_reflec.toFixed(1)} kWh</div></div>
+  `;
+
+  lastResults = {kwh_total,subtotal_serv,subtotal_imp,tasa_ap,kwh_reflec,total_factura,resultados};
+  scheduleAutosave();
+}
+
+function scheduleAutosave(){
+  if(autosaveTimer) clearTimeout(autosaveTimer);
+  autosaveTimer = setTimeout(()=>doAutosave(), 1400);
+}
+
+function doAutosave(){
+  saveState();
+  if(!lastResults) return;
+  const periodo = document.getElementById('periodo').value;
+  if(!periodo) return;
+  const [year,month] = periodo.split('-');
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const label = meses[parseInt(month)-1]+' '+year;
+  const entrada = {periodo,label,...lastResults,fecha_guardado:new Date().toISOString()};
+  const idx = historial.findIndex(h=>h.periodo===periodo);
+  if(idx>=0) historial[idx]=entrada; else historial.unshift(entrada);
+  saveHistorial();
+  document.getElementById('save-status').textContent = 'Guardado '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// ── NUEVO PERÍODO ──
+function iniciarNuevoPeriodo(){
+  const hayActuales = CASAS.some(c=>c.act>0);
+  if(!hayActuales){ alert('No hay lecturas actuales para pasar.'); return; }
+  const periodoEl = document.getElementById('periodo');
+  let [year,month] = periodoEl.value ? periodoEl.value.split('-').map(Number) : [new Date().getFullYear(),new Date().getMonth()+1];
+  month++; if(month>12){month=1;year++;}
+  const nuevoPeriodo = `${year}-${String(month).padStart(2,'0')}`;
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  abrirModalCustom({
+    title:'↗ Nuevo período: '+meses[month-1]+' '+year,
+    desc:'Las <strong>lecturas actuales</strong> pasarán a ser las <strong>anteriores</strong>. Los campos de la factura se limpiarán.',
+    btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+          <button class="btn btn-green" onclick="confirmarNuevoPeriodo('${nuevoPeriodo}')">✓ Confirmar</button>`
+  });
+}
+
+function confirmarNuevoPeriodo(nuevoPeriodo){
+  cerrarModal();
+  CASAS.forEach(c=>{c.ant=c.act;c.act=0;});
+  document.getElementById('periodo').value = nuevoPeriodo;
+  ['kwh_total','subtotal_serv','subtotal_imp','tasa_ap'].forEach(id=>document.getElementById(id).value='');
+  renderCasas();
+  calcular();
+}
+
+// ── HISTORIAL ──
+function renderHistorial(){
+  const cont = document.getElementById('historial-container');
+  if(!historial.length){
+    cont.innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div>No hay períodos guardados todavía.</div>';
+    return;
+  }
+  cont.innerHTML = '';
+  historial.forEach((h,idx)=>{
+    const div = document.createElement('div');
+    div.className = 'hist-item';
+    const rows = h.resultados.map(r=>`
+      <tr>
+        <td class="name" style="font-family:var(--font);font-weight:600">${r.nombre}</td>
+        <td class="r">${r.kwh.toFixed(1)}</td>
+        <td class="r" style="color:var(--text3)">${(r.pct*100).toFixed(1)}%</td>
+        <td class="r">${fmt(r.cargo_fijo)}</td>
+        <td class="r">${fmt(r.var_cost)}</td>
+        <td class="r">${fmt(r.tasa_ap)}</td>
+        <td class="r">${fmt(r.reflec)}</td>
+        <td class="total">${fmt(r.total)}</td>
+      </tr>
+    `).join('');
+    div.innerHTML = `
+      <div class="hist-head" onclick="toggleHist(${idx})">
+        <div class="hist-head-left">
+          <span style="font-size:18px">📅</span>
+          <div>
+            <div class="hist-period">${h.label}</div>
+            <div class="hist-meta">${fmt(h.total_factura)} · ${h.kwh_total} kWh</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button class="btn btn-red btn-sm" onclick="event.stopPropagation();abrirModal('borrar_uno',${idx})">🗑</button>
+          <span class="hist-chevron" id="chev-${idx}">▾</span>
+        </div>
+      </div>
+      <div class="hist-body" id="hist-body-${idx}">
+        <div class="rtable-wrap">
+          <table class="rtable">
+            <thead><tr>
+              <th>Casa</th><th class="r">kWh</th><th class="r">%</th>
+              <th class="r">Fijo</th><th class="r">Variable</th>
+              <th class="r">Alumb.</th><th class="r">Reflec.</th><th class="r">TOTAL</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px">
+          <span>Reflectores: ${h.kwh_reflec.toFixed(1)} kWh</span>
+          <span>Guardado: ${new Date(h.fecha_guardado).toLocaleDateString('es-AR')}</span>
+        </div>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function toggleHist(idx){
+  const body = document.getElementById('hist-body-'+idx);
+  const chev = document.getElementById('chev-'+idx);
+  const open = body.classList.toggle('open');
+  chev.classList.toggle('open', open);
+}
+
+// ── MODAL ──
+function abrirModalCustom({title,desc,btns,inputs='',err=''}){
+  document.getElementById('modal-box').innerHTML = `
+    <div class="modal-title">${title}</div>
+    <div class="modal-desc">${desc}</div>
+    ${inputs}
+    <div class="modal-err" id="modal-err">${err}</div>
+    <div class="modal-btns">${btns}</div>
+  `;
+  document.getElementById('modal-overlay').classList.add('open');
+  const first = document.getElementById('modal-box').querySelector('input');
+  if(first) setTimeout(()=>first.focus(),50);
+}
+
+function abrirModal(accion, idx){
+  pendingModal = {accion, idx};
+  if(accion === 'cambiar_pass'){
+    abrirModalCustom({
+      title:'🔑 Cambiar contraseña',
+      desc:'Ingresá la contraseña actual y la nueva.',
+      inputs:`
+        <input class="modal-input" type="password" id="mp-actual" placeholder="Contraseña actual" onkeydown="if(event.key==='Enter')document.getElementById('mp-nueva').focus()">
+        <input class="modal-input" type="password" id="mp-nueva" placeholder="Nueva contraseña" onkeydown="if(event.key==='Enter')document.getElementById('mp-confirm').focus()">
+        <input class="modal-input" type="password" id="mp-confirm" placeholder="Repetir nueva contraseña" onkeydown="if(event.key==='Enter')confirmarModal()">
+      `,
+      btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-yellow" onclick="confirmarModal()">✓ Cambiar</button>`
+    });
+  } else {
+    abrirModalCustom({
+      title: accion==='borrar_todo' ? '🗑 Borrar todo el historial' : '🗑 Borrar período',
+      desc: accion==='borrar_todo' ? 'Esta acción no se puede deshacer. Ingresá la contraseña para confirmar.' : 'Ingresá la contraseña para borrar este período.',
+      inputs:`<input class="modal-input" type="password" id="mp-actual" placeholder="Contraseña" onkeydown="if(event.key==='Enter')confirmarModal()">`,
+      btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-red" onclick="confirmarModal()">Confirmar</button>`
+    });
+  }
+}
+
+function cerrarModal(){
+  document.getElementById('modal-overlay').classList.remove('open');
+  pendingModal = null;
+}
+
+function confirmarModal(){
+  const actualEl = document.getElementById('mp-actual');
+  const errEl = document.getElementById('modal-err');
+  if(!actualEl) return;
+  if(actualEl.value !== getPass()){
+    errEl.textContent = 'Contraseña incorrecta.';
+    actualEl.value='';actualEl.focus();return;
+  }
+  const {accion,idx} = pendingModal;
+  if(accion==='cambiar_pass'){
+    const nueva = document.getElementById('mp-nueva').value;
+    const conf = document.getElementById('mp-confirm').value;
+    if(!nueva){errEl.textContent='Ingresá la nueva contraseña.';return;}
+    if(nueva!==conf){errEl.textContent='Las contraseñas no coinciden.';return;}
+    setPass(nueva);
+    cerrarModal();
+    return;
+  }
+  cerrarModal();
+  if(accion==='borrar_todo'){ historial=[]; saveHistorial(); renderHistorial(); }
+  else if(accion==='borrar_uno'){ historial.splice(idx,1); saveHistorial(); renderHistorial(); }
+}
+
+// ── JSONBIN CONFIG ──
+function saveJBinConfig(){
+  const key = document.getElementById('jbin-key').value.trim();
+  const binId = document.getElementById('jbin-binid').value.trim();
+  lsSet(LS_JBIN_KEY, key);
+  if(binId) lsSet(LS_JBIN_BINID, binId);
+  showJBinStatus('ok','✓ Configuración guardada');
+}
+
+async function testJBin(){
+  const key = document.getElementById('jbin-key').value.trim();
+  if(!key){showJBinStatus('err','⚠ Ingresá el API Key');return;}
+  showJBinStatus('pending','⟳ Probando...');
+  try{
+    const r = await fetch('https://api.jsonbin.io/v3/b',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'luz-barrio-test'},
+      body:JSON.stringify({test:true})
+    });
+    if(r.ok){
+      const d = await r.json();
+      lsSet(LS_JBIN_KEY, key);
+      lsSet(LS_JBIN_BINID, d.metadata.id);
+      document.getElementById('jbin-binid').value = d.metadata.id;
+      showJBinStatus('ok','✓ Conexión exitosa');
+    } else { showJBinStatus('err','✗ API Key inválido'); }
+  }catch(e){ showJBinStatus('err','✗ Error de conexión'); }
+}
+
+function showJBinStatus(type, msg){
+  const el = document.getElementById('jbin-status');
+  el.textContent = msg;
+  el.className = 'jbin-status ' + (type==='ok'?'jbin-ok':type==='err'?'jbin-err':'jbin-pending');
+  el.style.display = 'inline-flex';
+  if(type!=='pending') setTimeout(()=>el.style.display='none', 3000);
+}
+
+// ── PWA INSTALL ──
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', async ()=>{
+  if(!deferredInstall) return;
+  deferredInstall.prompt();
+  const {outcome} = await deferredInstall.userChoice;
+  if(outcome==='accepted') document.getElementById('install-banner').classList.remove('show');
+  deferredInstall = null;
+});
+
+// ── INIT ──
+const now = new Date();
+document.getElementById('periodo').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+loadAll();
+
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>

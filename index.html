@@ -175,6 +175,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   </div>
   <div class="topbar-right">
     <span class="sync-indicator" id="sync-indicator"></span>
+    <button class="theme-btn" id="admin-toggle" title="Modo admin" onclick="toggleAdmin()" style="font-size:13px">🔒</button>
     <button class="theme-btn" id="theme-toggle" title="Cambiar tema" onclick="toggleTheme()">🌙</button>
   </div>
 </header>
@@ -268,7 +269,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-title">
       <span>📋 Historial de períodos</span>
-      <div style="display:flex;gap:6px">
+      <div style="display:flex;gap:6px" id="historial-admin-btns" style="display:none">
         <button class="btn btn-yellow btn-sm" onclick="abrirModal('cambiar_pass')">🔑 Contraseña</button>
         <button class="btn btn-red btn-sm" onclick="abrirModal('borrar_todo')">🗑 Borrar todo</button>
       </div>
@@ -324,6 +325,20 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <!-- ══ CONFIG ══ -->
 <div class="tab-pane" id="tab-config">
   <div class="card">
+    <div class="card-title">
+      <span>🏠 Gestión de casas</span>
+      <span style="font-size:10px;color:var(--text3);font-weight:400">Los cambios afectan solo períodos nuevos</span>
+    </div>
+    <div id="gestor-casas-list" style="margin-bottom:12px"></div>
+    <div id="gestor-casas-add" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input type="text" id="nueva-casa-nombre" placeholder="Nombre de la nueva casa" maxlength="20"
+        style="flex:1;min-width:140px;padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font)"
+        onkeydown="if(event.key==='Enter')agregarCasa()">
+      <button class="btn btn-green" onclick="agregarCasa()">+ Agregar</button>
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:10px;font-family:var(--mono)">⚠ Eliminá una casa solo si no tiene historial, o los gráficos podrían quedar incompletos.</p>
+  </div>
+  <div class="card">
     <div class="card-title">☁️ Almacenamiento JSONBin</div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Guardá el historial en la nube con JSONBin.io. Creá una cuenta gratis, generá un API Key y pegalo acá para sincronizar en todos los dispositivos.</p>
     <div class="field" style="margin-bottom:10px"><label>API Key de JSONBin</label><input type="password" id="jbin-key" placeholder="$2a$10$..."></div>
@@ -362,7 +377,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <script>
-const CASAS=[
+let CASAS=[
   {nombre:'ALEJO',ant:4970.6,act:5318.7},
   {nombre:'ANA',ant:11361.9,act:11827.4},
   {nombre:'DANA',ant:4371,act:4620.4},
@@ -370,10 +385,11 @@ const CASAS=[
   {nombre:'JOSE',ant:5550.7,act:5891.81},
   {nombre:'MARIANA',ant:0,act:0},
 ];
-const LS_HIST='lb_historial',LS_STATE='lb_state',LS_PASS='lb_pass',LS_THEME='lb_theme',LS_JBIN_KEY='lb_jbin_key',LS_JBIN_BINID='lb_jbin_binid';
+const LS_HIST='lb_historial',LS_STATE='lb_state',LS_PASS='lb_pass',LS_THEME='lb_theme',LS_JBIN_KEY='lb_jbin_key',LS_JBIN_BINID='lb_jbin_binid',LS_CASAS='lb_casas';
 const DEFAULT_PASS='barrio123';
 let historial=[],lastResults=null,pendingModal=null,deferredInstall=null;
 let statCharts={},activeCasas=[];
+let isAdmin=false;
 const CASA_COLORS=['#378ADD','#1D9E75','#D85A30','#7F77DD','#BA7517','#D4537E'];
 
 // ── THEME ──
@@ -437,9 +453,10 @@ function saveState(){
     subtotal_serv:document.getElementById('subtotal_serv').value,
     subtotal_imp:document.getElementById('subtotal_imp').value,
     tasa_ap:document.getElementById('tasa_ap').value,
-    casas:CASAS.map(c=>({ant:c.ant,act:c.act}))
   }));
+  lsSet(LS_CASAS,JSON.stringify(CASAS));
 }
+function saveCasas(){ lsSet(LS_CASAS,JSON.stringify(CASAS)); }
 function showSync(type,msg){
   const el=document.getElementById('sync-indicator');
   el.textContent=msg;
@@ -451,6 +468,16 @@ async function loadAll(){
   const jbinData=await jbinLoad();
   if(jbinData){historial=jbinData;lsSet(LS_HIST,JSON.stringify(historial));}
   else{const local=lsGet(LS_HIST);if(local)historial=JSON.parse(local);}
+
+  // Cargar casas (nombres + lecturas)
+  const casasRaw=lsGet(LS_CASAS);
+  if(casasRaw){
+    CASAS=JSON.parse(casasRaw).map(c=>({nombre:c.nombre,ant:c.ant||0,act:c.act||0}));
+  } else {
+    const stRaw=lsGet(LS_STATE);
+    if(stRaw){const st=JSON.parse(stRaw);if(st.casas)st.casas.forEach((c,i)=>{if(CASAS[i]){CASAS[i].ant=c.ant;CASAS[i].act=c.act;}});}
+  }
+
   const stRaw=lsGet(LS_STATE);
   if(stRaw){
     const st=JSON.parse(stRaw);
@@ -459,13 +486,14 @@ async function loadAll(){
     if(st.subtotal_serv)document.getElementById('subtotal_serv').value=st.subtotal_serv;
     if(st.subtotal_imp)document.getElementById('subtotal_imp').value=st.subtotal_imp;
     if(st.tasa_ap)document.getElementById('tasa_ap').value=st.tasa_ap;
-    if(st.casas)st.casas.forEach((c,i)=>{CASAS[i].ant=c.ant;CASAS[i].act=c.act;});
   }
+
   const jkey=JBIN_KEY||lsGet(LS_JBIN_KEY),jbid=JBIN_BIN||lsGet(LS_JBIN_BINID);
   if(jkey)document.getElementById('jbin-key').value='●●●●●●●●●●●●●●●●●●●● (hardcoded)';
   if(jbid)document.getElementById('jbin-binid').value=jbid;
   renderCasas();
-  updateReflec(); // actualizar el campo derivado sin mostrar resultados
+  renderGestorCasas();
+  updateReflec();
 }
 
 // ── CASAS ──
@@ -636,7 +664,7 @@ function renderHistorial(){
     const idx=historial.findIndex(x=>x.periodo===h.periodo);
     const div=document.createElement('div');div.className='hist-item';
     const rows=h.resultados.map(r=>`<tr><td class="name" style="font-family:var(--font);font-weight:600">${r.nombre}</td><td class="r">${r.kwh.toFixed(1)}</td><td class="r" style="color:var(--text3)">${(r.pct*100).toFixed(1)}%</td><td class="r">${fmt(r.cargo_fijo)}</td><td class="r">${fmt(r.var_cost)}</td><td class="r">${fmt(r.tasa_ap)}</td><td class="r">${fmt(r.reflec)}</td><td class="total">${fmt(r.total)}</td></tr>`).join('');
-    div.innerHTML=`<div class="hist-head" onclick="toggleHist(${si})"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">📅</span><div><div class="hist-period">${h.label}</div><div class="hist-meta">${fmt(h.total_factura)} · ${h.kwh_total} kWh</div></div></div><div style="display:flex;align-items:center;gap:8px"><button class="btn btn-red btn-sm" onclick="event.stopPropagation();abrirModal('borrar_uno',${idx})">🗑</button><span class="hist-chevron" id="chev-${si}">▾</span></div></div><div class="hist-body" id="hist-body-${si}"><div class="rtable-wrap"><table class="rtable"><thead><tr><th>Casa</th><th class="r">kWh</th><th class="r">%</th><th class="r">Fijo</th><th class="r">Variable</th><th class="r">Alumb.</th><th class="r">Reflec.</th><th class="r">TOTAL</th></tr></thead><tbody>${rows}</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>Reflectores: ${h.kwh_reflec.toFixed(1)} kWh</span><span>Guardado: ${new Date(h.fecha_guardado).toLocaleDateString('es-AR')}</span></div></div>`;
+    div.innerHTML=`<div class="hist-head" onclick="toggleHist(${si})"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:18px">📅</span><div><div class="hist-period">${h.label}</div><div class="hist-meta">${fmt(h.total_factura)} · ${h.kwh_total} kWh</div></div></div><div style="display:flex;align-items:center;gap:8px">${isAdmin?`<button class="btn btn-red btn-sm" onclick="event.stopPropagation();abrirModal('borrar_uno',${idx})">🗑</button>`:''}<span class="hist-chevron" id="chev-${si}">▾</span></div></div><div class="hist-body" id="hist-body-${si}"><div class="rtable-wrap"><table class="rtable"><thead><tr><th>Casa</th><th class="r">kWh</th><th class="r">%</th><th class="r">Fijo</th><th class="r">Variable</th><th class="r">Alumb.</th><th class="r">Reflec.</th><th class="r">TOTAL</th></tr></thead><tbody>${rows}</tbody></table></div><div style="margin-top:8px;font-size:11px;color:var(--text3);font-family:var(--mono);display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px"><span>Reflectores: ${h.kwh_reflec.toFixed(1)} kWh</span><span>Guardado: ${new Date(h.fecha_guardado).toLocaleDateString('es-AR')}</span></div></div>`;
     cont.appendChild(div);
   });
 }
@@ -1051,6 +1079,123 @@ function roundRect(ctx,x,y,w,h,r,fill,stroke){
   ctx.closePath();
   if(fill){ctx.fillStyle=fill;ctx.fill();}
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}
+}
+
+// ── MODO ADMIN ──
+function toggleAdmin(){
+  if(isAdmin){
+    // desloguear
+    isAdmin=false;
+    applyAdminUI();
+  } else {
+    // pedir contraseña
+    abrirModalCustom({
+      title:'🔒 Modo administrador',
+      desc:'Ingresá la contraseña para habilitar acciones de administración.',
+      inputs:`<input class="modal-input" type="password" id="mp-actual" placeholder="Contraseña" onkeydown="if(event.key==='Enter')confirmarAdmin()">`,
+      btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn btn-accent" onclick="confirmarAdmin()">Ingresar</button>`
+    });
+  }
+}
+function confirmarAdmin(){
+  const inp=document.getElementById('mp-actual');
+  const errEl=document.getElementById('modal-err');
+  if(inp.value!==getPass()){errEl.textContent='Contraseña incorrecta.';inp.value='';inp.focus();return;}
+  cerrarModal();
+  isAdmin=true;
+  applyAdminUI();
+}
+function applyAdminUI(){
+  const btn=document.getElementById('admin-toggle');
+  if(isAdmin){
+    btn.textContent='🔓';
+    btn.style.background='var(--accent-bg)';
+    btn.style.color='var(--accent)';
+    btn.title='Modo admin activo — clic para salir';
+  } else {
+    btn.textContent='🔒';
+    btn.style.background='';
+    btn.style.color='';
+    btn.title='Modo admin';
+  }
+  // historial botones
+  const hbtns=document.getElementById('historial-admin-btns');
+  if(hbtns) hbtns.style.display=isAdmin?'flex':'none';
+  // gestor casas
+  const addRow=document.getElementById('gestor-casas-add');
+  if(addRow) addRow.style.display=isAdmin?'flex':'none';
+  // re-render para mostrar/ocultar botones de borrar
+  renderGestorCasas();
+  renderHistorial();
+}
+
+// ── GESTIÓN DE CASAS ──
+function renderGestorCasas(){
+  const list=document.getElementById('gestor-casas-list');
+  if(!list) return;
+  list.innerHTML='';
+  CASAS.forEach((c,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)';
+    row.innerHTML=`
+      <span style="width:10px;height:10px;border-radius:2px;background:${['#378ADD','#1D9E75','#D85A30','#7F77DD','#BA7517','#D4537E'][i%6]};flex-shrink:0"></span>
+      <input type="text" value="${c.nombre}" maxlength="20"
+        style="flex:1;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font)"
+        ${isAdmin?'':'readonly style="flex:1;padding:6px 8px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);font-size:13px;font-family:var(--font)"'}
+        onchange="if(isAdmin)renombrarCasa(${i},this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+      ${isAdmin?`<button class="btn btn-red btn-sm" onclick="eliminarCasa(${i})" title="Eliminar">🗑</button>`:''}
+    `;
+    list.appendChild(row);
+  });
+  const addRow=document.getElementById('gestor-casas-add');
+  if(addRow) addRow.style.display=isAdmin?'flex':'none';
+}
+
+function agregarCasa(){
+  if(!isAdmin){alert('Activá el modo admin primero.');return;}
+  const inp=document.getElementById('nueva-casa-nombre');
+  const nombre=inp.value.trim().toUpperCase();
+  if(!nombre){alert('Ingresá un nombre.');return;}
+  if(CASAS.find(c=>c.nombre===nombre)){alert('Ya existe una casa con ese nombre.');return;}
+  CASAS.push({nombre,ant:0,act:0});
+  inp.value='';
+  saveCasas();
+  renderCasas();
+  renderGestorCasas();
+  updateReflec();
+}
+
+function renombrarCasa(i,nuevoNombre){
+  if(!isAdmin) return;
+  const n=nuevoNombre.trim().toUpperCase();
+  if(!n){renderGestorCasas();return;}
+  if(CASAS.find((c,ci)=>c.nombre===n&&ci!==i)){alert('Ya existe una casa con ese nombre.');renderGestorCasas();return;}
+  CASAS[i].nombre=n;
+  saveCasas();
+  renderCasas();
+  renderGestorCasas();
+}
+
+function eliminarCasa(i){
+  if(!isAdmin){alert('Activá el modo admin primero.');return;}
+  if(CASAS.length<=1){alert('Tiene que haber al menos una casa.');return;}
+  const nombre=CASAS[i].nombre;
+  abrirModalCustom({
+    title:'🗑 Eliminar '+nombre,
+    desc:`¿Seguro que querés eliminar <strong>${nombre}</strong>? Los registros históricos no se modifican, pero los gráficos futuros no la van a incluir.`,
+    btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+          <button class="btn btn-red" onclick="confirmarEliminarCasa(${i})">Eliminar</button>`
+  });
+}
+
+function confirmarEliminarCasa(i){
+  cerrarModal();
+  CASAS.splice(i,1);
+  saveCasas();
+  renderCasas();
+  renderGestorCasas();
+  updateReflec();
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});

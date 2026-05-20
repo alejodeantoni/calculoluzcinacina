@@ -837,175 +837,211 @@ function generarImagen(){
   const[year,month]=periodo.split('-');
   const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const label=meses[parseInt(month)-1]+' '+year;
-  const{resultados,total_factura,kwh_total,kwh_reflec}=lastResults;
+  const{resultados,total_factura,kwh_total,kwh_reflec,subtotal_serv,subtotal_imp,tasa_ap}=lastResults;
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
 
-  const PAD=28, ROW=52, HEADER=130, FOOTER=60;
-  const W=480, H=HEADER + resultados.length*ROW + ROW + FOOTER + PAD;
+  const SCALE=2;
+  const PAD=32;
+  const ROW_H=44;
+  const HEAD_H=120;
+  const COL_HEAD_H=36;
+  const FOOTER_H=40;
+
+  // columnas: label, width, align
+  const COLS=[
+    {label:'CASA',      w:110, align:'left'},
+    {label:'kWh',       w:70,  align:'right'},
+    {label:'%',         w:55,  align:'right'},
+    {label:'CARGO FIJO',w:100, align:'right'},
+    {label:'VARIABLE',  w:100, align:'right'},
+    {label:'ALUMBRADO', w:100, align:'right'},
+    {label:'REFLECTORES',w:110,align:'right'},
+    {label:'TOTAL',     w:110, align:'right'},
+  ];
+  const TABLE_W=COLS.reduce((s,c)=>s+c.w,0);
+  const W=TABLE_W+PAD*2;
+
+  // rows: casas + reflectores + totales
+  const ROWS=resultados.length+2;
+  const H=HEAD_H+COL_HEAD_H+ROWS*ROW_H+FOOTER_H+PAD;
 
   const canvas=document.createElement('canvas');
-  canvas.width=W*2; canvas.height=H*2;
-  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  canvas.width=W*SCALE; canvas.height=H*SCALE;
   const ctx=canvas.getContext('2d');
-  ctx.scale(2,2);
+  ctx.scale(SCALE,SCALE);
 
-  const BG     = dark?'#0f172a':'#f0f4f8';
-  const CARD   = dark?'#1e293b':'#ffffff';
-  const BORDER = dark?'rgba(148,163,184,0.15)':'rgba(15,23,42,0.1)';
-  const TEXT   = dark?'#f1f5f9':'#0f172a';
-  const TEXT2  = dark?'#94a3b8':'#475569';
-  const TEXT3  = dark?'#64748b':'#94a3b8';
-  const ACCENT = dark?'#38bdf8':'#0284c7';
-  const STRIPE = dark?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.025)';
+  // colores
+  const BG     =dark?'#0f172a':'#f0f4f8';
+  const CARD   =dark?'#1e293b':'#ffffff';
+  const BORDER =dark?'rgba(148,163,184,0.18)':'rgba(15,23,42,0.10)';
+  const TEXT   =dark?'#f1f5f9':'#0f172a';
+  const TEXT2  =dark?'#94a3b8':'#475569';
+  const TEXT3  =dark?'#64748b':'#94a3b8';
+  const ACCENT =dark?'#38bdf8':'#0284c7';
+  const STRIPE =dark?'rgba(255,255,255,0.025)':'rgba(0,0,0,0.018)';
+  const GRAND  =dark?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.035)';
   const CASA_COLORS=['#378ADD','#1D9E75','#D85A30','#7F77DD','#BA7517','#D4537E'];
 
-  // fondo
-  ctx.fillStyle=BG;
-  ctx.fillRect(0,0,W,H);
+  // fondo y tarjeta
+  ctx.fillStyle=BG; ctx.fillRect(0,0,W,H);
+  roundRect(ctx,PAD/2,PAD/2,W-PAD,H-PAD,12,CARD,BORDER);
 
-  // tarjeta
-  roundRect(ctx, PAD/2, PAD/2, W-PAD, H-PAD, 12, CARD, BORDER);
-
-  // encabezado
+  // ── ENCABEZADO ──
+  const p=PAD+8;
   ctx.fillStyle=ACCENT;
-  ctx.font='800 13px "Segoe UI",sans-serif';
-  ctx.fillText('⚡ LUZ BARRIO — LA CINACINA', PAD+4, PAD+22);
+  ctx.font=`700 11px "Segoe UI",sans-serif`;
+  ctx.fillText('💰  LO QUE PAGA CADA UNO', p, PAD+20);
 
   ctx.fillStyle=TEXT;
-  ctx.font='700 22px "Segoe UI",sans-serif';
-  ctx.fillText(label, PAD+4, PAD+50);
+  ctx.font=`700 20px "Segoe UI",sans-serif`;
+  ctx.fillText(label, p, PAD+48);
 
   ctx.fillStyle=TEXT2;
-  ctx.font='400 12px "Segoe UI",sans-serif';
-  ctx.fillText('Total factura: ', PAD+4, PAD+74);
+  ctx.font=`400 12px "Segoe UI",sans-serif`;
+  ctx.fillText(`Total factura:`, p, PAD+72);
   ctx.fillStyle=ACCENT;
-  ctx.font='700 18px "Segoe UI",sans-serif';
-  ctx.fillText(fmt(total_factura), PAD+90, PAD+74);
+  ctx.font=`700 16px "Segoe UI",monospace`;
+  ctx.fillText(fmt(total_factura), p+88, PAD+72);
 
   ctx.fillStyle=TEXT3;
-  ctx.font='400 11px "Segoe UI",sans-serif';
-  ctx.fillText(`${kwh_total} kWh facturados · ${kwh_reflec.toFixed(1)} kWh reflectores`, PAD+4, PAD+94);
+  ctx.font=`400 11px "Segoe UI",sans-serif`;
+  ctx.fillText(`${kwh_total} kWh facturados  ·  ${kwh_reflec.toFixed(1)} kWh reflectores`, p, PAD+92);
 
-  // línea separadora
-  ctx.strokeStyle=BORDER;
-  ctx.lineWidth=1;
-  ctx.beginPath();
-  ctx.moveTo(PAD, HEADER-8);
-  ctx.lineTo(W-PAD, HEADER-8);
-  ctx.stroke();
+  // línea bajo encabezado
+  hline(ctx, PAD, HEAD_H+PAD/2-10, W-PAD, BORDER);
 
-  // columnas header
-  ctx.fillStyle=TEXT3;
-  ctx.font='600 10px "Segoe UI",sans-serif';
-  const cols=[
-    {label:'CASA',    x:PAD+4,   align:'left'},
-    {label:'kWh',     x:200,     align:'right'},
-    {label:'%',       x:250,     align:'right'},
-    {label:'TOTAL',   x:W-PAD-4, align:'right'},
-  ];
-  cols.forEach(c=>{
-    ctx.textAlign=c.align;
-    ctx.fillText(c.label, c.x, HEADER+2);
+  // ── CABECERA COLUMNAS ──
+  const TY=HEAD_H+PAD/2;
+  let cx=PAD;
+  COLS.forEach(col=>{
+    ctx.fillStyle=TEXT3;
+    ctx.font=`600 10px "Segoe UI",sans-serif`;
+    ctx.textAlign=col.align;
+    const tx=col.align==='right'?cx+col.w-4:cx+4;
+    ctx.fillText(col.label.toUpperCase(), tx, TY+20);
+    cx+=col.w;
   });
   ctx.textAlign='left';
+  hline(ctx, PAD, TY+COL_HEAD_H-4, W-PAD, BORDER);
 
-  // filas
+  // ── FILAS CASAS ──
+  const RY0=TY+COL_HEAD_H;
+
   resultados.forEach((r,i)=>{
-    const y=HEADER+ROW*(i+0.5)+10;
-    const rowY=HEADER+ROW*i+12;
+    const ry=RY0+i*ROW_H;
+    // stripe
+    if(i%2===0){ ctx.fillStyle=STRIPE; ctx.fillRect(PAD+1,ry,W-PAD*2-2,ROW_H); }
 
-    // stripe alternada
-    if(i%2===0){
-      ctx.fillStyle=STRIPE;
-      ctx.fillRect(PAD+1, rowY, W-PAD*2-2, ROW-2);
-    }
-
-    // dot de color
-    ctx.fillStyle=CASA_COLORS[i%CASA_COLORS.length];
-    ctx.beginPath();
-    ctx.arc(PAD+12, y+4, 5, 0, Math.PI*2);
-    ctx.fill();
-
-    // nombre
-    ctx.fillStyle=TEXT;
-    ctx.font='600 14px "Segoe UI",sans-serif';
+    const mid=ry+ROW_H/2+5;
+    const vals=[
+      r.nombre,
+      r.kwh.toFixed(1),
+      (r.pct*100).toFixed(1)+'%',
+      fmt(r.cargo_fijo),
+      fmt(r.var_cost),
+      fmt(r.tasa_ap),
+      fmt(r.reflec),
+      fmt(r.total),
+    ];
+    let cx2=PAD;
+    COLS.forEach((col,ci)=>{
+      ctx.textAlign=col.align;
+      const tx=col.align==='right'?cx2+col.w-4:cx2+4;
+      if(ci===0){
+        // dot color + nombre
+        ctx.fillStyle=CASA_COLORS[i%CASA_COLORS.length];
+        ctx.beginPath(); ctx.arc(cx2+10, mid-3, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle=TEXT;
+        ctx.font=`600 13px "Segoe UI",sans-serif`;
+        ctx.textAlign='left';
+        ctx.fillText(vals[0], cx2+20, mid);
+      } else if(ci===COLS.length-1){
+        ctx.fillStyle=ACCENT;
+        ctx.font=`700 14px "Segoe UI",monospace`;
+        ctx.fillText(vals[ci], tx, mid);
+      } else if(ci===2){
+        ctx.fillStyle=TEXT3;
+        ctx.font=`400 12px "Segoe UI",monospace`;
+        ctx.fillText(vals[ci], tx, mid);
+      } else {
+        ctx.fillStyle=TEXT2;
+        ctx.font=`400 13px "Segoe UI",monospace`;
+        ctx.fillText(vals[ci], tx, mid);
+      }
+      cx2+=col.w;
+    });
     ctx.textAlign='left';
-    ctx.fillText(r.nombre, PAD+24, y+6);
-
-    // kwh
-    ctx.fillStyle=TEXT2;
-    ctx.font='400 13px "Segoe UI",monospace';
-    ctx.textAlign='right';
-    ctx.fillText(r.kwh.toFixed(1), 200, y+6);
-
-    // pct
-    ctx.fillStyle=TEXT3;
-    ctx.font='400 12px "Segoe UI",monospace';
-    ctx.fillText((r.pct*100).toFixed(1)+'%', 250, y+6);
-
-    // total
-    ctx.fillStyle=ACCENT;
-    ctx.font='700 15px "Segoe UI",monospace';
-    ctx.fillText(fmt(r.total), W-PAD-4, y+6);
-
-    // desglose pequeño
-    ctx.fillStyle=TEXT3;
-    ctx.font='400 10px "Segoe UI",sans-serif';
-    ctx.fillText(`Fijo ${fmt(r.cargo_fijo)} · Variable ${fmt(r.var_cost)} · Reflec. ${fmt(r.reflec)}`, PAD+24, y+22);
+    hline(ctx, PAD, ry+ROW_H-1, W-PAD, BORDER);
   });
 
-  // línea antes del total
-  const totalY=HEADER+ROW*resultados.length+12;
-  ctx.strokeStyle=BORDER;
-  ctx.lineWidth=1;
-  ctx.beginPath();
-  ctx.moveTo(PAD, totalY-4);
-  ctx.lineTo(W-PAD, totalY-4);
-  ctx.stroke();
-
-  // fila total
-  ctx.fillStyle=TEXT;
-  ctx.font='700 13px "Segoe UI",sans-serif';
+  // ── FILA REFLECTORES ──
+  const reflec_cost=subtotal_serv*(kwh_reflec/(kwh_total||1));
+  const rry=RY0+resultados.length*ROW_H;
+  const rmid=rry+ROW_H/2+5;
+  const reflecVals=['Reflectores', kwh_reflec.toFixed(1), (kwh_total>0?(kwh_reflec/kwh_total*100).toFixed(1):0)+'%', '—', fmt(reflec_cost), '—', '—', '—'];
+  let cx3=PAD;
+  COLS.forEach((col,ci)=>{
+    ctx.textAlign=col.align;
+    const tx=col.align==='right'?cx3+col.w-4:cx3+4;
+    ctx.fillStyle=TEXT3;
+    ctx.font=`400 12px "Segoe UI",${ci===0?'sans-serif':'monospace'}`;
+    if(ci===0){ ctx.textAlign='left'; ctx.fillText(reflecVals[0], cx3+4, rmid); }
+    else ctx.fillText(reflecVals[ci], tx, rmid);
+    cx3+=col.w;
+  });
   ctx.textAlign='left';
-  ctx.fillText('TOTAL FACTURA', PAD+4, totalY+16);
-  ctx.fillStyle=ACCENT;
-  ctx.font='800 16px "Segoe UI",monospace';
-  ctx.textAlign='right';
-  ctx.fillText(fmt(total_factura), W-PAD-4, totalY+16);
 
-  // footer
+  // línea antes de totales
+  hline(ctx, PAD, rry+ROW_H-1, W-PAD, dark?'rgba(148,163,184,0.35)':'rgba(15,23,42,0.18)');
+
+  // ── FILA TOTALES ──
+  const try2=rry+ROW_H;
+  ctx.fillStyle=GRAND; ctx.fillRect(PAD+1, try2, W-PAD*2-2, ROW_H);
+  const tmid=try2+ROW_H/2+5;
+  const totVals=['TOTALES', kwh_total.toFixed(1), '100%', fmt(subtotal_imp), fmt(subtotal_serv), fmt(tasa_ap), '—', fmt(total_factura)];
+  let cx4=PAD;
+  COLS.forEach((col,ci)=>{
+    ctx.textAlign=col.align;
+    const tx=col.align==='right'?cx4+col.w-4:cx4+4;
+    if(ci===COLS.length-1){
+      ctx.fillStyle=ACCENT; ctx.font=`700 15px "Segoe UI",monospace`;
+    } else if(ci===0){
+      ctx.fillStyle=TEXT; ctx.font=`700 13px "Segoe UI",sans-serif`; ctx.textAlign='left';
+    } else {
+      ctx.fillStyle=TEXT; ctx.font=`700 13px "Segoe UI",monospace`;
+    }
+    ctx.fillText(totVals[ci], ci===0?cx4+4:tx, tmid);
+    cx4+=col.w;
+  });
+  ctx.textAlign='left';
+
+  // ── FOOTER ──
   ctx.fillStyle=TEXT3;
-  ctx.font='400 10px "Segoe UI",sans-serif';
+  ctx.font=`400 10px "Segoe UI",sans-serif`;
   ctx.textAlign='center';
-  ctx.fillText('Barrio La Cinacina · generado con Luz Barrio · Alejo De Antoni', W/2, H-PAD/2-4);
-
+  ctx.fillText('Barrio La Cinacina  ·  Luz Barrio  ·  Alejo De Antoni', W/2, H-PAD/2+4);
   ctx.textAlign='left';
 
   // descargar / compartir
   canvas.toBlob(blob=>{
     const url=URL.createObjectURL(blob);
     if(navigator.share && navigator.canShare && navigator.canShare({files:[new File([blob],'luz-'+periodo+'.png',{type:'image/png'})]})){
-      navigator.share({
-        title:'Luz Barrio — '+label,
-        files:[new File([blob],'luz-'+periodo+'.png',{type:'image/png'})]
-      }).catch(()=>{});
+      navigator.share({title:'Luz Barrio — '+label, files:[new File([blob],'luz-'+periodo+'.png',{type:'image/png'})]}).catch(()=>{});
     } else {
-      const a=document.createElement('a');
-      a.href=url;
-      a.download='luz-'+periodo+'.png';
-      a.click();
+      const a=document.createElement('a'); a.href=url; a.download='luz-'+periodo+'.png'; a.click();
     }
     setTimeout(()=>URL.revokeObjectURL(url),5000);
   },'image/png');
 }
 
+function hline(ctx,x1,y,x2,color){ ctx.strokeStyle=color; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke(); }
+
 function roundRect(ctx,x,y,w,h,r,fill,stroke){
   ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
-  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
-  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
-  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
   ctx.closePath();
   if(fill){ctx.fillStyle=fill;ctx.fill();}
   if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}

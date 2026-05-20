@@ -1,4 +1,4 @@
-const CACHE = 'luz-barrio-v2.2.0';
+const CACHE = 'luz-barrio-v2.3.0';
 const ASSETS = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS.map(u => new Request(u, {mode:'no-cors'})))).then(() => self.skipWaiting()));

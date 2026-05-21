@@ -737,7 +737,50 @@ function buildChartTotales(sorted){
 function buildChartKwh(sorted){
   if(statCharts.kwh){statCharts.kwh.destroy();}
   const o=gcOpts();
-  statCharts.kwh=new Chart(document.getElementById('chart-kwh'),{type:'line',data:{labels:sorted.map(shortLabel),datasets:[{data:sorted.map(h=>h.kwh_total),borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.08)',fill:true,tension:.35,pointBackgroundColor:'#38bdf8',pointRadius:4,pointHoverRadius:6,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...o.tooltip,callbacks:{label:c=>c.parsed.y+' kWh'}}},scales:{x:{grid:{color:o.grid},ticks:{color:o.tick,font:{size:11},autoSkip:false,maxRotation:45},border:{color:'transparent'}},y:{grid:{color:o.grid},ticks:{color:o.tick,font:{size:11},callback:v=>v+' kWh'},border:{color:'transparent'}}}}});
+  statCharts.kwh=new Chart(document.getElementById('chart-kwh'),{
+    type:'line',
+    data:{
+      labels:sorted.map(shortLabel),
+      datasets:[
+        {
+          label:'Total facturado',
+          data:sorted.map(h=>h.kwh_total),
+          borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,0.08)',
+          fill:true,tension:.35,pointBackgroundColor:'#38bdf8',
+          pointRadius:4,pointHoverRadius:6,borderWidth:2
+        },
+        {
+          label:'Reflectores + portón',
+          data:sorted.map(h=>parseFloat((h.kwh_reflec||0).toFixed(1))),
+          borderColor:'#fbbf24',backgroundColor:'rgba(251,191,36,0.06)',
+          borderDash:[6,3],fill:false,tension:.35,
+          pointBackgroundColor:'#fbbf24',pointStyle:'triangle',
+          pointRadius:4,pointHoverRadius:6,borderWidth:2
+        }
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{
+          display:true,
+          labels:{color:o.tick,font:{size:11},boxWidth:12,padding:16,
+            generateLabels:chart=>chart.data.datasets.map((ds,i)=>({
+              text:ds.label,fillStyle:ds.borderColor,strokeStyle:ds.borderColor,
+              lineWidth:2,hidden:false,datasetIndex:i,
+              lineDash:ds.borderDash||[]
+            }))
+          }
+        },
+        tooltip:{...o.tooltip,callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y} kWh`}}
+      },
+      scales:{
+        x:{grid:{color:o.grid},ticks:{color:o.tick,font:{size:11},autoSkip:false,maxRotation:45},border:{color:'transparent'}},
+        y:{grid:{color:o.grid},ticks:{color:o.tick,font:{size:11},callback:v=>v+' kWh'},border:{color:'transparent'}}
+      }
+    }
+  });
 }
 function buildChartCasas(sorted){
   const allCasas=[...new Set(sorted.flatMap(h=>h.resultados.map(r=>r.nombre)))];
@@ -783,6 +826,19 @@ function buildChartConsumoCasas(sorted){
       borderWidth:2,tension:0.3,spanGaps:true,fill:false,
     };
   });
+
+  // Agregar reflectores como línea extra
+  datasets.push({
+    label:'Reflectores + portón',
+    data:sorted.map(h=>parseFloat((h.kwh_reflec||0).toFixed(1))),
+    borderColor:'#fbbf24',
+    backgroundColor:'rgba(251,191,36,0.06)',
+    borderDash:[8,4],
+    pointBackgroundColor:'#fbbf24',
+    pointStyle:'triangle',
+    pointRadius:5,pointHoverRadius:7,
+    borderWidth:2.5,tension:0.3,spanGaps:true,fill:false,
+  });
   statCharts.consumoCasas=new Chart(document.getElementById('chart-consumo-casas'),{
     type:'line',
     data:{labels:sorted.map(shortLabel),datasets},
@@ -797,6 +853,7 @@ function buildChartConsumoCasas(sorted){
     }
   });
   const leg=document.getElementById('legend-consumo-casas');leg.innerHTML='';
+  // leyenda casas
   allCasas.forEach((nombre,i)=>{
     const p=PALETA[i%PALETA.length];
     const el=document.createElement('div');
@@ -813,6 +870,20 @@ function buildChartConsumoCasas(sorted){
     el.appendChild(svg);el.appendChild(document.createTextNode(nombre));
     leg.appendChild(el);
   });
+  // leyenda reflectores
+  const reflecLeg=document.createElement('div');
+  reflecLeg.style.cssText='display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)';
+  const rsvg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  rsvg.setAttribute('width','28');rsvg.setAttribute('height','12');rsvg.style.flexShrink='0';
+  const rline=document.createElementNS('http://www.w3.org/2000/svg','line');
+  rline.setAttribute('x1','0');rline.setAttribute('y1','6');rline.setAttribute('x2','28');rline.setAttribute('y2','6');
+  rline.setAttribute('stroke','#fbbf24');rline.setAttribute('stroke-width','2.5');rline.setAttribute('stroke-dasharray','8 4');
+  const rtri=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+  rtri.setAttribute('points','14,3 17,9 11,9');rtri.setAttribute('fill','#fbbf24');
+  rsvg.appendChild(rline);rsvg.appendChild(rtri);
+  reflecLeg.appendChild(rsvg);reflecLeg.appendChild(document.createTextNode('Reflectores + portón'));
+  leg.appendChild(reflecLeg);
+
   const statsEl=document.getElementById('stats-consumo-casas');statsEl.innerHTML='';
   allCasas.forEach((nombre,i)=>{
     const p=PALETA[i%PALETA.length];
@@ -825,6 +896,14 @@ function buildChartConsumoCasas(sorted){
     card.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px">${nombre}</div><div style="font-size:11px;color:var(--text3);line-height:1.9;font-family:var(--mono)">Prom: <strong style="color:var(--text2)">${avg.toFixed(1)} kWh</strong><br>Máx: <strong style="color:var(--text2)">${max.toFixed(1)}</strong> · Mín: <strong style="color:var(--text2)">${min.toFixed(1)}</strong></div>`;
     statsEl.appendChild(card);
   });
+  // stat card reflectores
+  const rvals=sorted.map(h=>h.kwh_reflec||0);
+  const ravg=rvals.reduce((a,b)=>a+b,0)/rvals.length;
+  const rmax=Math.max(...rvals),rmin=Math.min(...rvals);
+  const rcard=document.createElement('div');
+  rcard.style.cssText='background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;border-left:3px solid #fbbf24';
+  rcard.innerHTML=`<div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:5px">Reflectores + portón</div><div style="font-size:11px;color:var(--text3);line-height:1.9;font-family:var(--mono)">Prom: <strong style="color:var(--text2)">${ravg.toFixed(1)} kWh</strong><br>Máx: <strong style="color:var(--text2)">${rmax.toFixed(1)}</strong> · Mín: <strong style="color:var(--text2)">${rmin.toFixed(1)}</strong></div>`;
+  statsEl.appendChild(rcard);
 }
 function buildChartDist(sorted){
   if(statCharts.dist){statCharts.dist.destroy();}

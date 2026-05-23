@@ -155,6 +155,23 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .chart-section.active{display:block}
 .sel-btn{padding:5px 12px;font-size:12px;font-weight:600;border:1px solid var(--border2);border-radius:var(--radius-sm);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all .2s}
 .sel-btn.active{background:var(--accent-bg);color:var(--accent);border-color:rgba(56,189,248,.3)}
+.gasto-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.gasto-head{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;background:var(--surface2);gap:10px}
+.gasto-desc{font-size:14px;font-weight:700;color:var(--text)}
+.gasto-meta{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:3px}
+.gasto-total{font-size:16px;font-weight:700;color:var(--accent);font-family:var(--mono);white-space:nowrap}
+.gasto-body{padding:12px 14px;border-top:1px solid var(--border)}
+.pagos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.pago-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;transition:all .2s;user-select:none}
+.pago-card.pagado{background:var(--green-bg);border-color:rgba(52,211,153,.3)}
+.pago-card.pendiente{background:var(--surface2)}
+.pago-card:hover{border-color:var(--border2)}
+.pago-nombre{font-size:13px;font-weight:600;color:var(--text)}
+.pago-monto{font-size:12px;font-family:var(--mono);color:var(--text2)}
+.pago-estado{font-size:18px;flex-shrink:0}
+.gasto-casas-check{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.gasto-casa-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.gasto-casa-row:last-child{border-bottom:none}
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px}
@@ -183,6 +200,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 <nav class="tabs">
   <button class="tab-btn active" onclick="showTab('calcular',this)">Calcular</button>
   <button class="tab-btn" onclick="showTab('historial',this)">Historial</button>
+  <button class="tab-btn" onclick="showTab('gastos',this)">Gastos</button>
   <button class="tab-btn" onclick="showTab('estadisticas',this)">Estadísticas</button>
   <button class="tab-btn" onclick="showTab('config',this)">Configuración</button>
 </nav>
@@ -276,6 +294,56 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div id="historial-container"></div>
   </div>
+</div>
+
+<!-- ══ GASTOS ══ -->
+<div class="tab-pane" id="tab-gastos">
+
+  <!-- Formulario nuevo gasto -->
+  <div class="card">
+    <div class="card-title">
+      <span>💸 Nuevo gasto</span>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="field">
+        <label>Descripción</label>
+        <input type="text" id="gasto-desc" placeholder="Ej: Pintura portón, Corte pasto..." maxlength="60">
+      </div>
+      <div class="field">
+        <label>Fecha</label>
+        <input type="date" id="gasto-fecha">
+      </div>
+    </div>
+    <div class="g2" style="margin-bottom:12px">
+      <div class="field">
+        <label>Monto total ($)</label>
+        <input type="number" id="gasto-monto" placeholder="0">
+      </div>
+      <div class="field">
+        <label>Dividir entre</label>
+        <select id="gasto-modo" onchange="renderGastoCasasSelector()" style="padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);width:100%">
+          <option value="todas">Todas las casas por igual</option>
+          <option value="seleccion">Casas seleccionadas</option>
+          <option value="manual">Monto manual por casa</option>
+        </select>
+      </div>
+    </div>
+    <div id="gasto-casas-selector" style="margin-bottom:12px"></div>
+    <button class="btn btn-accent btn-big" onclick="agregarGasto()">💸 Registrar gasto</button>
+  </div>
+
+  <!-- Historial de gastos -->
+  <div class="card">
+    <div class="card-title">
+      <span>📋 Gastos registrados</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="gastos-total-badge" style="font-size:11px;font-family:var(--mono);color:var(--text3)"></span>
+        <button class="btn btn-red btn-sm" id="btn-borrar-gastos" style="display:none" onclick="borrarTodosGastos()">🗑 Borrar todo</button>
+      </div>
+    </div>
+    <div id="gastos-lista"></div>
+  </div>
+
 </div>
 
 <!-- ══ ESTADÍSTICAS ══ -->
@@ -412,6 +480,7 @@ function showTab(name,btn){
   btn.classList.add('active');
   if(name==='historial') renderHistorial();
   if(name==='estadisticas') buildStats();
+  if(name==='gastos'){renderGastoCasasSelector();renderGastos();}
 }
 
 // ── STORAGE ──
@@ -494,6 +563,11 @@ async function loadAll(){
   renderCasas();
   renderGestorCasas();
   updateReflec();
+  loadGastos();
+  const fechaEl=document.getElementById('gasto-fecha');
+  if(fechaEl) fechaEl.value=new Date().toISOString().split('T')[0];
+  renderGastoCasasSelector();
+  renderGastos();
 }
 
 // ── CASAS ──
@@ -1231,6 +1305,7 @@ function applyAdminUI(){
   // re-render para mostrar/ocultar botones de borrar
   renderGestorCasas();
   renderHistorial();
+  renderGastos();
 }
 
 // ── GESTIÓN DE CASAS ──
@@ -1299,6 +1374,209 @@ function confirmarEliminarCasa(i){
   renderCasas();
   renderGestorCasas();
   updateReflec();
+}
+
+// ── GASTOS ──
+const LS_GASTOS='lb_gastos';
+let gastos=[];
+
+function loadGastos(){
+  try{const r=lsGet(LS_GASTOS);if(r)gastos=JSON.parse(r);}catch(e){gastos=[];}
+}
+function saveGastos(){
+  lsSet(LS_GASTOS,JSON.stringify(gastos));
+  renderGastos();
+}
+
+function showTabGastos(){
+  renderGastoCasasSelector();
+  renderGastos();
+}
+
+function renderGastoCasasSelector(){
+  const modo=document.getElementById('gasto-modo').value;
+  const cont=document.getElementById('gasto-casas-selector');
+  cont.innerHTML='';
+  if(modo==='todas') return;
+
+  if(modo==='seleccion'){
+    const wrap=document.createElement('div');
+    wrap.className='gasto-casas-check';
+    wrap.innerHTML='<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;width:100%;margin-bottom:4px">Seleccioná las casas que participan</div>';
+    CASAS.forEach((c,i)=>{
+      const btn=document.createElement('button');
+      btn.className='sel-btn active';
+      btn.dataset.idx=i;
+      btn.textContent=c.nombre;
+      btn.onclick=()=>btn.classList.toggle('active');
+      wrap.appendChild(btn);
+    });
+    cont.appendChild(wrap);
+  }
+
+  if(modo==='manual'){
+    const label=document.createElement('div');
+    label.style.cssText='font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px';
+    label.textContent='Monto por casa';
+    cont.appendChild(label);
+    CASAS.forEach((c,i)=>{
+      const row=document.createElement('div');
+      row.className='gasto-casa-row';
+      row.innerHTML=`
+        <span style="font-size:13px;font-weight:600;color:var(--text);min-width:90px">${c.nombre}</span>
+        <input type="number" id="gasto-manual-${i}" placeholder="0" min="0"
+          style="flex:1;padding:6px 8px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--mono)">
+        <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">$</span>
+      `;
+      cont.appendChild(row);
+    });
+  }
+}
+
+function agregarGasto(){
+  const desc=document.getElementById('gasto-desc').value.trim();
+  const fecha=document.getElementById('gasto-fecha').value;
+  const monto=parseFloat(document.getElementById('gasto-monto').value)||0;
+  const modo=document.getElementById('gasto-modo').value;
+
+  if(!desc){alert('Ingresá una descripción.');return;}
+  if(!fecha){alert('Ingresá la fecha.');return;}
+  if(monto<=0){alert('Ingresá un monto mayor a 0.');return;}
+
+  let pagos=[];
+
+  if(modo==='todas'){
+    const parte=monto/CASAS.length;
+    pagos=CASAS.map(c=>({nombre:c.nombre,monto:parseFloat(parte.toFixed(2)),pagado:false}));
+  } else if(modo==='seleccion'){
+    const selBtns=[...document.querySelectorAll('#gasto-casas-selector .sel-btn.active')];
+    const selNames=selBtns.map(b=>CASAS[parseInt(b.dataset.idx)].nombre);
+    if(!selNames.length){alert('Seleccioná al menos una casa.');return;}
+    const parte=monto/selNames.length;
+    pagos=selNames.map(n=>({nombre:n,monto:parseFloat(parte.toFixed(2)),pagado:false}));
+  } else if(modo==='manual'){
+    let suma=0;
+    pagos=CASAS.map((c,i)=>{
+      const m=parseFloat(document.getElementById('gasto-manual-'+i).value)||0;
+      suma+=m;
+      return{nombre:c.nombre,monto:m,pagado:false};
+    }).filter(p=>p.monto>0);
+    if(!pagos.length){alert('Ingresá al menos un monto.');return;}
+    if(Math.abs(suma-monto)>1){
+      if(!confirm(`La suma de los montos (${fmt(suma)}) difiere del total (${fmt(monto)}). ¿Continuar igual?`))return;
+    }
+  }
+
+  const gasto={
+    id: Date.now().toString(),
+    desc, fecha, monto, pagos,
+    fecha_registro: new Date().toISOString()
+  };
+  gastos.unshift(gasto);
+  saveGastos();
+
+  // limpiar form
+  document.getElementById('gasto-desc').value='';
+  document.getElementById('gasto-monto').value='';
+  document.getElementById('gasto-modo').value='todas';
+  renderGastoCasasSelector();
+}
+
+function togglePago(gastoId, nombreCasa){
+  const g=gastos.find(x=>x.id===gastoId);
+  if(!g) return;
+  const p=g.pagos.find(x=>x.nombre===nombreCasa);
+  if(!p) return;
+  p.pagado=!p.pagado;
+  saveGastos();
+}
+
+function borrarGasto(id){
+  abrirModalCustom({
+    title:'🗑 Borrar gasto',
+    desc:'¿Seguro que querés borrar este gasto? Esta acción no se puede deshacer.',
+    btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+          <button class="btn btn-red" onclick="confirmarBorrarGasto('${id}')">Borrar</button>`
+  });
+}
+function confirmarBorrarGasto(id){
+  cerrarModal();
+  gastos=gastos.filter(g=>g.id!==id);
+  saveGastos();
+}
+function borrarTodosGastos(){
+  abrirModalCustom({
+    title:'🗑 Borrar todos los gastos',
+    desc:'¿Seguro? Se van a eliminar todos los gastos registrados.',
+    btns:`<button class="btn" onclick="cerrarModal()">Cancelar</button>
+          <button class="btn btn-red" onclick="confirmarBorrarTodosGastos()">Borrar todo</button>`
+  });
+}
+function confirmarBorrarTodosGastos(){
+  cerrarModal();
+  gastos=[];
+  saveGastos();
+}
+
+function renderGastos(){
+  const cont=document.getElementById('gastos-lista');
+  const badge=document.getElementById('gastos-total-badge');
+  const btnBorrarTodo=document.getElementById('btn-borrar-gastos');
+  if(!cont) return;
+
+  // mostrar botón borrar todo solo en admin
+  if(btnBorrarTodo) btnBorrarTodo.style.display=isAdmin&&gastos.length?'inline-flex':'none';
+
+  if(!gastos.length){
+    cont.innerHTML='<div class="empty-state">💸<br>No hay gastos registrados todavía.</div>';
+    if(badge) badge.textContent='';
+    return;
+  }
+
+  const totalPendiente=gastos.reduce((s,g)=>s+g.pagos.filter(p=>!p.pagado).reduce((a,b)=>a+b.monto,0),0);
+  const totalRegistrado=gastos.reduce((s,g)=>s+g.monto,0);
+  if(badge) badge.textContent=`Total: ${fmt(totalRegistrado)} · Pendiente: ${fmt(totalPendiente)}`;
+
+  cont.innerHTML='';
+  gastos.forEach(g=>{
+    const pagados=g.pagos.filter(p=>p.pagado).length;
+    const total=g.pagos.length;
+    const allPagado=pagados===total;
+    const fechaLabel=g.fecha?new Date(g.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'}):'';
+
+    const div=document.createElement('div');
+    div.className='gasto-item';
+
+    const pagosHTML=g.pagos.map(p=>`
+      <div class="pago-card ${p.pagado?'pagado':'pendiente'}" onclick="togglePago('${g.id}','${p.nombre}')">
+        <div>
+          <div class="pago-nombre">${p.nombre}</div>
+          <div class="pago-monto">${fmt(p.monto)}</div>
+        </div>
+        <span class="pago-estado">${p.pagado?'✅':'⏳'}</span>
+      </div>
+    `).join('');
+
+    div.innerHTML=`
+      <div class="gasto-head">
+        <div style="flex:1;min-width:0">
+          <div class="gasto-desc">${g.desc}</div>
+          <div class="gasto-meta">${fechaLabel} · ${pagados}/${total} pagaron</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div>
+            <div class="gasto-total">${fmt(g.monto)}</div>
+            <div style="font-size:10px;text-align:right;margin-top:2px;font-family:var(--mono);color:${allPagado?'var(--green)':'var(--yellow)'}">${allPagado?'✓ Saldado':'Pendiente'}</div>
+          </div>
+          ${isAdmin?`<button class="btn btn-red btn-sm" onclick="borrarGasto('${g.id}')">🗑</button>`:''}
+        </div>
+      </div>
+      <div class="gasto-body">
+        <div class="pagos-grid">${pagosHTML}</div>
+      </div>
+    `;
+    cont.appendChild(div);
+  });
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});

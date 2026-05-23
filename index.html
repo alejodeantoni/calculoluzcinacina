@@ -156,11 +156,21 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .sel-btn{padding:5px 12px;font-size:12px;font-weight:600;border:1px solid var(--border2);border-radius:var(--radius-sm);background:transparent;color:var(--text3);cursor:pointer;font-family:var(--font);transition:all .2s}
 .sel-btn.active{background:var(--accent-bg);color:var(--accent);border-color:rgba(56,189,248,.3)}
 .gasto-item{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
-.gasto-head{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;background:var(--surface2);gap:10px}
+.gasto-head{display:flex;align-items:flex-start;justify-content:space-between;padding:12px 14px;background:var(--surface2);gap:10px;cursor:pointer;transition:background .2s}
+.gasto-head:hover{background:var(--bg3)}
 .gasto-desc{font-size:14px;font-weight:700;color:var(--text)}
 .gasto-meta{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:3px}
 .gasto-total{font-size:16px;font-weight:700;color:var(--accent);font-family:var(--mono);white-space:nowrap}
-.gasto-body{padding:12px 14px;border-top:1px solid var(--border)}
+.gasto-body{padding:12px 14px;border-top:1px solid var(--border);display:none}
+.gasto-body.open{display:block}
+.gasto-chevron{font-size:14px;color:var(--text3);transition:transform .25s;flex-shrink:0;align-self:center}
+.gasto-chevron.open{transform:rotate(180deg)}
+
+
+
+
+
+
 .pagos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .pago-card{border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;transition:all .2s;user-select:none}
 .pago-card.pagado{background:var(--green-bg);border-color:rgba(52,211,153,.3)}
@@ -303,6 +313,10 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-title">
       <span>💸 Nuevo gasto</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="dolar-badge" style="font-size:11px;font-family:var(--mono);color:var(--text3)">Cargando dólar...</span>
+        <button class="btn btn-sm" onclick="fetchDolar()" title="Actualizar cotización">↻</button>
+      </div>
     </div>
     <div class="g2" style="margin-bottom:10px">
       <div class="field">
@@ -314,19 +328,34 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <input type="date" id="gasto-fecha">
       </div>
     </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="field">
+        <label>Quién hizo el trabajo</label>
+        <input type="text" id="gasto-proveedor" placeholder="Nombre del proveedor" maxlength="40">
+      </div>
+      <div class="field">
+        <label>Teléfono (WhatsApp)</label>
+        <input type="tel" id="gasto-telefono" placeholder="Ej: 2214123456" maxlength="20">
+      </div>
+    </div>
     <div class="g2" style="margin-bottom:12px">
       <div class="field">
         <label>Monto total ($)</label>
-        <input type="number" id="gasto-monto" placeholder="0">
+        <input type="number" id="gasto-monto" placeholder="0" oninput="actualizarMontoDolar()">
       </div>
       <div class="field">
-        <label>Dividir entre</label>
-        <select id="gasto-modo" onchange="renderGastoCasasSelector()" style="padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);width:100%">
-          <option value="todas">Todas las casas por igual</option>
-          <option value="seleccion">Casas seleccionadas</option>
-          <option value="manual">Monto manual por casa</option>
-        </select>
+        <label>Equivalente en USD</label>
+        <input type="number" id="gasto-monto-usd" placeholder="0" readonly style="background:var(--bg2);color:var(--text3)">
+        <span class="hint" id="dolar-hint">— cotización no cargada</span>
       </div>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Dividir entre</label>
+      <select id="gasto-modo" onchange="renderGastoCasasSelector()" style="padding:8px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:14px;font-family:var(--font);width:100%">
+        <option value="todas">Todas las casas por igual</option>
+        <option value="seleccion">Casas seleccionadas</option>
+        <option value="manual">Monto manual por casa</option>
+      </select>
     </div>
     <div id="gasto-casas-selector" style="margin-bottom:12px"></div>
     <button class="btn btn-accent btn-big" onclick="agregarGasto()">💸 Registrar gasto</button>
@@ -568,6 +597,7 @@ async function loadAll(){
   if(fechaEl) fechaEl.value=new Date().toISOString().split('T')[0];
   renderGastoCasasSelector();
   renderGastos();
+  fetchDolar();
 }
 
 // ── CASAS ──
@@ -1376,6 +1406,39 @@ function confirmarEliminarCasa(i){
   updateReflec();
 }
 
+// ── DÓLAR ──
+let dolarHoy=null;
+
+async function fetchDolar(){
+  const badge=document.getElementById('dolar-badge');
+  const hint=document.getElementById('dolar-hint');
+  if(badge) badge.textContent='Buscando...';
+  try{
+    const r=await fetch('https://dolarapi.com/v1/dolares/blue');
+    if(!r.ok) throw new Error('error');
+    const d=await r.json();
+    dolarHoy=d.venta;
+    const msg=`💵 Dólar blue: $${dolarHoy}`;
+    if(badge) badge.textContent=msg;
+    if(hint) hint.textContent=`1 USD = $${dolarHoy} (blue)`;
+    actualizarMontoDolar();
+  }catch(e){
+    if(badge) badge.textContent='Sin cotización';
+    if(hint) hint.textContent='— no se pudo cargar el dólar';
+  }
+}
+
+function actualizarMontoDolar(){
+  const monto=parseFloat(document.getElementById('gasto-monto').value)||0;
+  const usdEl=document.getElementById('gasto-monto-usd');
+  if(!usdEl) return;
+  if(dolarHoy&&monto>0){
+    usdEl.value=(monto/dolarHoy).toFixed(2);
+  } else {
+    usdEl.value='';
+  }
+}
+
 // ── GASTOS ──
 const LS_GASTOS='lb_gastos';
 let gastos=[];
@@ -1438,6 +1501,9 @@ function agregarGasto(){
   const fecha=document.getElementById('gasto-fecha').value;
   const monto=parseFloat(document.getElementById('gasto-monto').value)||0;
   const modo=document.getElementById('gasto-modo').value;
+  const proveedor=document.getElementById('gasto-proveedor').value.trim();
+  const telefono=document.getElementById('gasto-telefono').value.trim().replace(/\D/g,'');
+  const montoUsd=parseFloat(document.getElementById('gasto-monto-usd').value)||null;
 
   if(!desc){alert('Ingresá una descripción.');return;}
   if(!fecha){alert('Ingresá la fecha.');return;}
@@ -1469,7 +1535,7 @@ function agregarGasto(){
 
   const gasto={
     id: Date.now().toString(),
-    desc, fecha, monto, pagos,
+    desc, fecha, monto, montoUsd, proveedor, telefono, pagos,
     fecha_registro: new Date().toISOString()
   };
   gastos.unshift(gasto);
@@ -1478,6 +1544,9 @@ function agregarGasto(){
   // limpiar form
   document.getElementById('gasto-desc').value='';
   document.getElementById('gasto-monto').value='';
+  document.getElementById('gasto-monto-usd').value='';
+  document.getElementById('gasto-proveedor').value='';
+  document.getElementById('gasto-telefono').value='';
   document.getElementById('gasto-modo').value='todas';
   renderGastoCasasSelector();
 }
@@ -1524,7 +1593,6 @@ function renderGastos(){
   const btnBorrarTodo=document.getElementById('btn-borrar-gastos');
   if(!cont) return;
 
-  // mostrar botón borrar todo solo en admin
   if(btnBorrarTodo) btnBorrarTodo.style.display=isAdmin&&gastos.length?'inline-flex':'none';
 
   if(!gastos.length){
@@ -1538,7 +1606,7 @@ function renderGastos(){
   if(badge) badge.textContent=`Total: ${fmt(totalRegistrado)} · Pendiente: ${fmt(totalPendiente)}`;
 
   cont.innerHTML='';
-  gastos.forEach(g=>{
+  gastos.forEach((g,gi)=>{
     const pagados=g.pagos.filter(p=>p.pagado).length;
     const total=g.pagos.length;
     const allPagado=pagados===total;
@@ -1551,32 +1619,53 @@ function renderGastos(){
       <div class="pago-card ${p.pagado?'pagado':'pendiente'}" onclick="togglePago('${g.id}','${p.nombre}')">
         <div>
           <div class="pago-nombre">${p.nombre}</div>
-          <div class="pago-monto">${fmt(p.monto)}</div>
+          <div class="pago-monto">${fmt(p.monto)}${g.montoUsd?` · U$S ${(g.montoUsd/total).toFixed(1)}`:''}</div>
         </div>
         <span class="pago-estado">${p.pagado?'✅':'⏳'}</span>
       </div>
     `).join('');
 
+    // proveedor + whatsapp
+    let proveedorHTML='';
+    if(g.proveedor||g.telefono){
+      const waLink=g.telefono?`<a href="https://wa.me/549${g.telefono}?text=Hola%20${encodeURIComponent(g.proveedor||'')}%2C%20te%20contactamos%20por%20${encodeURIComponent(g.desc)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--radius-sm);background:#25d36622;color:#25d366;font-size:12px;font-weight:600;text-decoration:none;border:1px solid #25d36633">📱 WhatsApp</a>`:'';
+      proveedorHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 10px;background:var(--surface2);border-radius:var(--radius-sm);flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--text2)">🔧 <strong>${g.proveedor||'Sin nombre'}</strong>${g.telefono?` · ${g.telefono}`:''}</span>
+        ${waLink}
+      </div>`;
+    }
+
     div.innerHTML=`
-      <div class="gasto-head">
+      <div class="gasto-head" onclick="toggleGasto('gasto-body-${gi}','gasto-chev-${gi}')">
         <div style="flex:1;min-width:0">
           <div class="gasto-desc">${g.desc}</div>
-          <div class="gasto-meta">${fechaLabel} · ${pagados}/${total} pagaron</div>
+          <div class="gasto-meta">${fechaLabel}${g.proveedor?' · 🔧 '+g.proveedor:''} · ${pagados}/${total} pagaron</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <div>
+          <div style="text-align:right">
             <div class="gasto-total">${fmt(g.monto)}</div>
+            ${g.montoUsd?`<div style="font-size:10px;color:var(--text3);font-family:var(--mono)">U$S ${g.montoUsd.toFixed(2)}</div>`:''}
             <div style="font-size:10px;text-align:right;margin-top:2px;font-family:var(--mono);color:${allPagado?'var(--green)':'var(--yellow)'}">${allPagado?'✓ Saldado':'Pendiente'}</div>
           </div>
-          ${isAdmin?`<button class="btn btn-red btn-sm" onclick="borrarGasto('${g.id}')">🗑</button>`:''}
+          ${isAdmin?`<button class="btn btn-red btn-sm" onclick="event.stopPropagation();borrarGasto('${g.id}')">🗑</button>`:''}
+          <span class="gasto-chevron" id="gasto-chev-${gi}">▾</span>
         </div>
       </div>
-      <div class="gasto-body">
+      <div class="gasto-body" id="gasto-body-${gi}">
+        ${proveedorHTML}
         <div class="pagos-grid">${pagosHTML}</div>
       </div>
     `;
     cont.appendChild(div);
   });
+}
+
+function toggleGasto(bodyId, chevId){
+  const body=document.getElementById(bodyId);
+  const chev=document.getElementById(chevId);
+  if(!body) return;
+  const open=body.classList.toggle('open');
+  if(chev) chev.classList.toggle('open',open);
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});

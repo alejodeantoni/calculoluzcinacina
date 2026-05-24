@@ -726,7 +726,9 @@ function calcularYMostrar(){
     // Mostrar aviso sin modal — solo texto debajo
     document.getElementById('save-status').innerHTML=`<span style="color:var(--yellow)">⚠ ${label} ya está guardado — borralo del Historial para reemplazarlo.</span>`;
   } else {
-    const entrada={periodo,label,...lastResults,fecha_guardado:new Date().toISOString()};
+    const entrada={periodo,label,...lastResults,
+      lecturas:CASAS.map(c=>({nombre:c.nombre,ant:c.ant,act:c.act})),
+      fecha_guardado:new Date().toISOString()};
     historial.unshift(entrada);
     saveHistorial();
     saveState();
@@ -1071,16 +1073,20 @@ function confirmarCargarEnCalculador(periodo){
   document.getElementById('subtotal_imp').value=h.subtotal_imp;
   document.getElementById('tasa_ap').value=h.tasa_ap;
 
-  // cargar lecturas: reconstruir desde consumo
-  // act = ant + kwh (no tenemos ant exacto, usamos el consumo del historial)
-  h.resultados.forEach(r=>{
-    const idx=CASAS.findIndex(c=>c.nombre===r.nombre);
-    if(idx>=0){
-      // poner anterior en 0 y actual = kwh para que el consumo sea correcto
-      CASAS[idx].ant=0;
-      CASAS[idx].act=parseFloat(r.kwh.toFixed(1));
-    }
-  });
+  // cargar lecturas de medidores
+  if(h.lecturas && h.lecturas.length){
+    // tenemos las lecturas reales guardadas
+    h.lecturas.forEach(l=>{
+      const idx=CASAS.findIndex(c=>c.nombre===l.nombre);
+      if(idx>=0){ CASAS[idx].ant=l.ant; CASAS[idx].act=l.act; }
+    });
+  } else {
+    // fallback: reconstruir desde consumo (período viejo sin lecturas)
+    h.resultados.forEach(r=>{
+      const idx=CASAS.findIndex(c=>c.nombre===r.nombre);
+      if(idx>=0){ CASAS[idx].ant=0; CASAS[idx].act=parseFloat(r.kwh.toFixed(1)); }
+    });
+  }
 
   // ocultar resultados anteriores
   document.getElementById('resultado-wrap').classList.add('results-hidden');
@@ -1100,7 +1106,11 @@ function confirmarCargarEnCalculador(periodo){
   // aviso
   setTimeout(()=>{
     const status=document.getElementById('save-status');
-    status.innerHTML=`<span style="color:var(--yellow)">⚠ Datos cargados de ${h.label} — las lecturas muestran el consumo del período, no las lecturas reales del medidor. Ajustalas si es necesario.</span>`;
+    if(h.lecturas && h.lecturas.length){
+      status.innerHTML=`<span style="color:var(--accent)">✓ Datos de ${h.label} cargados con lecturas reales de medidores.</span>`;
+    } else {
+      status.innerHTML=`<span style="color:var(--yellow)">⚠ Datos de ${h.label} cargados — las lecturas muestran el consumo del período, no las lecturas reales. Ajustalas si es necesario.</span>`;
+    }
   },100);
 }
 

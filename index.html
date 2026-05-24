@@ -204,7 +204,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topbar-left">
     <div class="app-logo">⚡</div>
     <span class="app-title">Luz Barrio</span>
-    <span class="app-version">v3.1.0</span>
+    <span class="app-version">v3.2.0</span>
   </div>
   <div class="topbar-right">
     <span class="sync-indicator" id="sync-indicator"></span>
@@ -539,7 +539,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-title">ℹ️ Acerca de</div>
     <div style="font-size:13px;color:var(--text2);line-height:2;font-family:var(--mono)">
-      <div>Versión: <strong style="color:var(--text)">v3.1.0</strong></div>
+      <div>Versión: <strong style="color:var(--text)">v3.2.0</strong></div>
       <div>App: <strong style="color:var(--text)">Calculadora de Luz — Barrio La Cinacina</strong></div>
       <div>Creada por: <strong style="color:var(--accent)">Alejo De Antoni</strong></div>
       <div>Tecnología: <strong style="color:var(--text)">PWA · HTML · CSS · JS</strong></div>
@@ -548,7 +548,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <footer class="footer">
-  <div>Creada por <strong>Alejo De Antoni</strong> · v3.1.0</div>
+  <div>Creada por <strong>Alejo De Antoni</strong> · v3.2.0</div>
   <div style="margin-top:4px;color:var(--text3)">Barrio La Cinacina · La Plata</div>
 </footer>
 
@@ -1858,6 +1858,7 @@ function editarGasto(id){
   const g=gastos.find(x=>x.id===id);
   if(!g) return;
   editandoGastoId=id;
+  document.getElementById('btn-registrar-gasto').dataset.editingId=id;
 
   // Ir al tab gastos
   document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
@@ -1903,6 +1904,8 @@ function editarGasto(id){
 
 function cancelarEdicionGasto(){
   editandoGastoId=null;
+  const btn=document.getElementById('btn-registrar-gasto');
+  if(btn) delete btn.dataset.editingId;
   document.getElementById('gasto-form-title').textContent='💸 Nuevo gasto';
   document.getElementById('btn-registrar-gasto').textContent='💸 Registrar gasto';
   document.getElementById('btn-cancelar-edicion').style.display='none';
@@ -1917,13 +1920,15 @@ function cancelarEdicionGasto(){
 }
 
 function submitGastoForm(){
-  if(editandoGastoId) confirmarEditarGasto(editandoGastoId);
+  const btn=document.getElementById('btn-registrar-gasto');
+  const id=btn.dataset.editingId;
+  if(id) confirmarEditarGasto(id);
   else agregarGasto();
 }
 
 function confirmarEditarGasto(id){
   const idx=gastos.findIndex(x=>x.id===id);
-  if(idx<0){ alert('No se encontró el gasto.'); return; }
+  if(idx<0){ alert('No se encontró el gasto (id: '+id+')'); return; }
   const g=gastos[idx];
 
   const desc=document.getElementById('gasto-desc').value.trim();

@@ -1,4 +1,4 @@
-const CACHE = 'luz-barrio-v2.4.0';
+const CACHE = 'luz-barrio-v3.0.0';
 const ASSETS = ['./', './index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', e => {
@@ -19,15 +19,22 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if(e.request.method !== 'GET') return;
-  if(e.request.url.includes('jsonbin.io') || e.request.url.includes('fonts.googleapis.com') || e.request.url.includes('cdnjs.cloudflare.com')) return;
+  if(e.request.url.includes('jsonbin.io') || 
+     e.request.url.includes('fonts.googleapis.com') || 
+     e.request.url.includes('cdnjs.cloudflare.com') ||
+     e.request.url.includes('dolarapi.com') ||
+     e.request.url.includes('bluelytics.com')) return;
 
-  // index.html y sw.js: network-first para siempre tener la última versión
+  // Siempre network-first para index.html — así siempre baja la última versión
   const url = new URL(e.request.url);
-  const isCore = url.pathname.endsWith('/') || url.pathname.endsWith('index.html') || url.pathname.endsWith('sw.js');
+  const isCore = url.pathname.endsWith('/') || 
+                 url.pathname.endsWith('index.html') || 
+                 url.pathname.endsWith('sw.js') ||
+                 url.pathname.endsWith('manifest.json');
 
   if(isCore){
     e.respondWith(
-      fetch(e.request).then(resp => {
+      fetch(e.request, {cache: 'no-store'}).then(resp => {
         if(resp && resp.status === 200){
           const clone = resp.clone();
           caches.open(CACHE).then(c => c.put(e.request, clone));
@@ -37,13 +44,7 @@ self.addEventListener('fetch', e => {
     );
   } else {
     e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-        if(resp && resp.status === 200){
-          const clone = resp.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return resp;
-      }).catch(() => cached))
+      caches.match(e.request).then(cached => cached || fetch(e.request))
     );
   }
 });

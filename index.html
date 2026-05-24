@@ -373,7 +373,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
     </div>
     <div id="gasto-casas-selector" style="margin-bottom:12px"></div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-accent btn-big" id="btn-registrar-gasto" onclick="editandoGastoId?confirmarEditarGasto(editandoGastoId):agregarGasto()" style="flex:1">💸 Registrar gasto</button>
+      <button class="btn btn-accent btn-big" id="btn-registrar-gasto" onclick="submitGastoForm()" style="flex:1">💸 Registrar gasto</button>
       <button class="btn btn-sm" id="btn-cancelar-edicion" onclick="cancelarEdicionGasto()" style="display:none;align-self:stretch">✕ Cancelar</button>
     </div>
   </div>
@@ -1916,6 +1916,11 @@ function cancelarEdicionGasto(){
   renderGastoCasasSelector();
 }
 
+function submitGastoForm(){
+  if(editandoGastoId) confirmarEditarGasto(editandoGastoId);
+  else agregarGasto();
+}
+
 function confirmarEditarGasto(id){
   const g=gastos.find(x=>x.id===id);
   if(!g) return;
@@ -1927,9 +1932,16 @@ function confirmarEditarGasto(id){
   const montoUsd=parseFloat(document.getElementById('gasto-monto-usd').value)||null;
   const dolarVenta=montoUsd&&monto?parseFloat((monto/montoUsd).toFixed(2)):g.dolarVenta||null;
   if(!desc){alert('Ingresá una descripción.');return;}
+
+  // Aplicar cambios al objeto
   Object.assign(g,{desc,fecha,monto,proveedor,telefono,montoUsd,dolarVenta});
+
+  // Guardar primero, limpiar después
+  lsSet(LS_GASTOS,JSON.stringify(gastos));
+  jbinSaveAll();
+
   cancelarEdicionGasto();
-  saveGastos();
+  renderGastos();
 }
 
 function borrarGasto(id){

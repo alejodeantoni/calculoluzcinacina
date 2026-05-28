@@ -204,7 +204,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topbar-left">
     <div class="app-logo">🏘</div>
     <span class="app-title" id="app-title-display">Gastos Barrio</span>
-    <span class="app-version">v4.0.0</span>
+    <span class="app-version">v4.1.0</span>
   </div>
   <div class="topbar-right">
     <span class="sync-indicator" id="sync-indicator"></span>
@@ -224,41 +224,60 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <button class="tab-btn" onclick="showTab('config',this)">⚙️ Config</button>
 </nav>
 
-<!-- ══ INICIO ══ -->
+<!-- INICIO -->
 <div class="tab-pane active" id="tab-inicio">
-  <div class="card" style="text-align:center;padding:1.5rem">
-    <div style="font-size:48px;margin-bottom:.5rem" id="inicio-logo">🏘</div>
-    <div style="font-size:22px;font-weight:800;color:var(--text);margin-bottom:4px" id="inicio-nombre">Gastos Barrio</div>
-    <div style="font-size:13px;color:var(--text3);font-family:var(--mono)" id="inicio-subtitulo">La Plata</div>
+
+  <div class="card" style="text-align:center;padding:1.25rem 1rem">
+    <div style="font-size:40px;margin-bottom:.35rem" id="inicio-logo">&#127968;</div>
+    <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:3px" id="inicio-nombre">Gastos Barrio</div>
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono)" id="inicio-subtitulo">La Plata</div>
   </div>
 
-  <!-- KPIs rápidos -->
   <div class="metrics" id="inicio-kpis"></div>
 
-  <!-- Accesos rápidos -->
-  <div class="card">
-    <div class="card-title">⚡ Accesos rápidos</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn btn-accent" style="justify-content:center;padding:14px" onclick="goTab('calcular')">⚡ Calcular luz</button>
-      <button class="btn btn-green" style="justify-content:center;padding:14px" onclick="goTab('gastos')">💸 Nuevo gasto</button>
-      <button class="btn" style="justify-content:center;padding:14px" onclick="goTab('historial')">📋 Ver historial</button>
-      <button class="btn" style="justify-content:center;padding:14px" onclick="goTab('contactos')">📞 Contactos</button>
+  <div class="card" id="inicio-deuda-card">
+    <div class="card-title">
+      <span>&#128176; Deuda pendiente por casa</span>
+      <span style="font-size:10px;font-weight:400;color:var(--text3)">Luz + ABSA + Gastos</span>
     </div>
+    <div id="inicio-deuda-content"></div>
   </div>
 
-  <!-- Último período -->
   <div class="card" id="inicio-ultimo-periodo" style="display:none">
-    <div class="card-title">📅 Último período de luz</div>
+    <div class="card-title">
+      <span>&#9889; Ultimo periodo de luz</span>
+      <button class="btn btn-sm" onclick="goTab('historial')">Ver todos &rarr;</button>
+    </div>
     <div id="inicio-ultimo-content"></div>
   </div>
 
-  <!-- Gastos pendientes -->
+  <div class="card" id="inicio-ultimo-absa" style="display:none">
+    <div class="card-title">
+      <span>&#128167; Ultimo periodo ABSA</span>
+      <button class="btn btn-sm" onclick="goTab('absa')">Ver todos &rarr;</button>
+    </div>
+    <div id="inicio-ultimo-absa-content"></div>
+  </div>
+
   <div class="card" id="inicio-gastos-card" style="display:none">
-    <div class="card-title">💸 Gastos con pagos pendientes</div>
+    <div class="card-title">
+      <span>&#128184; Gastos pendientes</span>
+      <button class="btn btn-sm" onclick="goTab('gastos')">Ver todos &rarr;</button>
+    </div>
     <div id="inicio-gastos-content"></div>
   </div>
-</div>
 
+  <div class="card">
+    <div class="card-title">&#128640; Accesos rapidos</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <button class="btn btn-accent" style="justify-content:center;padding:12px" onclick="goTab('calcular')">&#9889; Calcular luz</button>
+      <button class="btn btn-green" style="justify-content:center;padding:12px" onclick="goTab('gastos')">&#128184; Nuevo gasto</button>
+      <button class="btn" style="justify-content:center;padding:12px" onclick="goTab('absa')">&#128167; Registrar ABSA</button>
+      <button class="btn" style="justify-content:center;padding:12px" onclick="goTab('contactos')">&#128222; Contactos</button>
+    </div>
+  </div>
+
+</div>
 <!-- ══ CALCULAR ══ -->
 <div class="tab-pane active" id="tab-calcular">
 
@@ -662,7 +681,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-title">ℹ️ Acerca de</div>
     <div style="font-size:13px;color:var(--text2);line-height:2;font-family:var(--mono)">
-      <div>Versión: <strong style="color:var(--text)">v4.0.0</strong></div>
+      <div>Versión: <strong style="color:var(--text)">v4.1.0</strong></div>
       <div>App: <strong style="color:var(--text)">Calculadora de Luz — Barrio La Cinacina</strong></div>
       <div>Creada por: <strong style="color:var(--accent)">Alejo De Antoni</strong></div>
       <div>Tecnología: <strong style="color:var(--text)">PWA · HTML · CSS · JS</strong></div>
@@ -671,7 +690,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <footer class="footer">
-  <div>Creada por <strong>Alejo De Antoni</strong> · v4.0.0</div>
+  <div>Creada por <strong>Alejo De Antoni</strong> · v4.1.0</div>
   <div style="margin-top:4px;color:var(--text3)">Barrio La Cinacina · La Plata</div>
 </footer>
 
@@ -2442,26 +2461,92 @@ function goTab(name){
 }
 
 function renderInicio(){
-  renderIniciokpis();
+  cargarNombreApp();
+  renderInicioKpis();
+  renderDeudaPorCasa();
   renderInicioUltimoPeriodo();
+  renderInicioUltimoAbsa();
   renderInicioGastosPendientes();
 }
 
-function renderIniciokpis(){
+function renderInicioKpis(){
   const kpis=document.getElementById('inicio-kpis');
   if(!kpis) return;
-
   const totalLuz=historial.reduce((s,h)=>s+h.total_factura,0);
   const totalGastos=gastos.reduce((s,g)=>s+g.monto,0);
-  const totalPendiente=gastos.reduce((s,g)=>s+g.pagos.filter(p=>!p.pagado).reduce((a,b)=>a+b.monto,0),0);
-  const ultimoPeriodo=historial.length?[...historial].sort((a,b)=>b.periodo.localeCompare(a.periodo))[0]:null;
-
+  const totalAbsa=absaHistorial.reduce((s,h)=>s+h.monto,0);
+  const deudaTotal=
+    gastos.reduce((s,g)=>s+g.pagos.filter(p=>!p.pagado).reduce((a,b)=>a+b.monto,0),0)+
+    absaHistorial.reduce((s,h)=>s+h.pagos.filter(p=>!p.pagado).reduce((a,b)=>a+b.monto,0),0);
   kpis.innerHTML=`
-    <div class="metric"><div class="metric-label">Períodos de luz</div><div class="metric-value">${historial.length}</div></div>
-    <div class="metric"><div class="metric-label">Total luz acumulado</div><div class="metric-value accent" style="font-size:15px">${fmt(totalLuz)}</div></div>
-    <div class="metric"><div class="metric-label">Gastos registrados</div><div class="metric-value">${gastos.length}</div></div>
-    <div class="metric"><div class="metric-label">Deuda pendiente</div><div class="metric-value" style="color:var(--yellow);font-size:15px">${fmt(totalPendiente)}</div></div>
+    <div class="metric"><div class="metric-label">Periodos luz</div><div class="metric-value">${historial.length}</div></div>
+    <div class="metric"><div class="metric-label">Periodos ABSA</div><div class="metric-value">${absaHistorial.length}</div></div>
+    <div class="metric"><div class="metric-label">Total gastos</div><div class="metric-value" style="font-size:15px">${fmt(totalGastos)}</div></div>
+    <div class="metric"><div class="metric-label">Deuda pendiente</div><div class="metric-value" style="color:var(--yellow);font-size:15px">${fmt(deudaTotal)}</div></div>
   `;
+}
+
+function renderDeudaPorCasa(){
+  const cont=document.getElementById('inicio-deuda-content');
+  if(!cont) return;
+
+  // Calcular deuda por casa sumando: gastos pendientes + ABSA pendiente
+  const deudaMap={};
+  CASAS.forEach(c=>{deudaMap[c.nombre]={nombre:c.nombre,gastos:0,absa:0,total:0};});
+
+  // Sumar gastos pendientes
+  gastos.forEach(g=>{
+    g.pagos.forEach(p=>{
+      if(!p.pagado){
+        if(!deudaMap[p.nombre]) deudaMap[p.nombre]={nombre:p.nombre,gastos:0,absa:0,total:0};
+        deudaMap[p.nombre].gastos+=p.monto;
+      }
+    });
+  });
+
+  // Sumar ABSA pendiente
+  absaHistorial.forEach(h=>{
+    h.pagos.forEach(p=>{
+      if(!p.pagado){
+        if(!deudaMap[p.nombre]) deudaMap[p.nombre]={nombre:p.nombre,gastos:0,absa:0,total:0};
+        deudaMap[p.nombre].absa+=p.monto;
+      }
+    });
+  });
+
+  // Calcular totales
+  Object.values(deudaMap).forEach(d=>{d.total=d.gastos+d.absa;});
+  const lista=Object.values(deudaMap).sort((a,b)=>b.total-a.total);
+  const maxDeuda=lista.length?lista[0].total:0;
+
+  if(!lista.length||lista.every(d=>d.total===0)){
+    cont.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--green);font-weight:600">&#10003; Todos al dia!</div>';
+    return;
+  }
+
+  const CASA_COLORS=['#378ADD','#1D9E75','#D85A30','#7F77DD','#BA7517','#D4537E'];
+  cont.innerHTML=lista.map((d,i)=>{
+    const color=CASA_COLORS[CASAS.findIndex(c=>c.nombre===d.nombre)%CASA_COLORS.length]||CASA_COLORS[i%CASA_COLORS.length];
+    const pct=maxDeuda>0?(d.total/maxDeuda*100).toFixed(1):0;
+    const saldado=d.total===0;
+    return`<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0;display:inline-block"></span>
+          <span style="font-size:14px;font-weight:700">${d.nombre}</span>
+          ${saldado?'<span style="font-size:10px;background:var(--green-bg);color:var(--green);padding:2px 7px;border-radius:4px;font-weight:600">Al dia</span>':''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;font-family:var(--mono)">
+          ${d.gastos>0?`<span style="font-size:11px;color:var(--text3)">Gastos: ${fmt(d.gastos)}</span>`:''}
+          ${d.absa>0?`<span style="font-size:11px;color:var(--text3)">ABSA: ${fmt(d.absa)}</span>`:''}
+          <span style="font-size:15px;font-weight:700;color:${saldado?'var(--green)':'var(--red)'}">${fmt(d.total)}</span>
+        </div>
+      </div>
+      <div style="background:var(--surface2);border-radius:4px;height:8px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${saldado?'var(--green)':color};border-radius:4px;transition:width .5s ease"></div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderInicioUltimoPeriodo(){
@@ -2471,21 +2556,40 @@ function renderInicioUltimoPeriodo(){
   if(!historial.length){card.style.display='none';return;}
   card.style.display='block';
   const h=[...historial].sort((a,b)=>b.periodo.localeCompare(a.periodo))[0];
-  const rows=h.resultados.map(r=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px;font-weight:600">${r.nombre}</span>
-      <span style="font-size:14px;font-weight:700;color:var(--accent);font-family:var(--mono)">${fmt(r.total)}</span>
-    </div>
-  `).join('');
   cont.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
       <span style="font-size:15px;font-weight:700">${h.label}</span>
-      <span style="font-size:13px;color:var(--text2);font-family:var(--mono)">${fmt(h.total_factura)} · ${h.kwh_total} kWh</span>
+      <span style="font-size:13px;color:var(--text2);font-family:var(--mono)">${fmt(h.total_factura)} &bull; ${h.kwh_total} kWh</span>
     </div>
-    ${rows}
-    <div class="btn-row" style="margin-top:10px;justify-content:flex-end">
-      <button class="btn btn-sm" onclick="goTab('historial')">Ver historial completo →</button>
+    ${h.resultados.map(r=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:600">${r.nombre}</span>
+        <span style="font-size:14px;font-weight:700;color:var(--accent);font-family:var(--mono)">${fmt(r.total)}</span>
+      </div>`).join('')}
+  `;
+}
+
+function renderInicioUltimoAbsa(){
+  const card=document.getElementById('inicio-ultimo-absa');
+  const cont=document.getElementById('inicio-ultimo-absa-content');
+  if(!card||!cont) return;
+  if(!absaHistorial.length){card.style.display='none';return;}
+  card.style.display='block';
+  const h=[...absaHistorial].sort((a,b)=>b.periodo.localeCompare(a.periodo))[0];
+  const pagados=h.pagos.filter(p=>p.pagado).length;
+  cont.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+      <span style="font-size:15px;font-weight:700">${h.label}</span>
+      <span style="font-size:13px;color:var(--text2);font-family:var(--mono)">${fmt(h.monto)} &bull; ${pagados}/${h.pagos.length} pagaron</span>
     </div>
+    ${h.pagos.map(p=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;font-weight:600">${p.nombre}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;font-family:var(--mono)">${fmt(p.monto)}</span>
+          <span style="font-size:16px">${p.pagado?'&#10003;':'&#8987;'}</span>
+        </div>
+      </div>`).join('')}
   `;
 }
 
@@ -2499,17 +2603,17 @@ function renderInicioGastosPendientes(){
   cont.innerHTML=pendientes.slice(0,5).map(g=>{
     const pp=g.pagos.filter(p=>!p.pagado);
     const total=pp.reduce((s,p)=>s+p.monto,0);
+    const fechaLabel=g.fecha?new Date(g.fecha+'T12:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'}):'';
     return`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:13px;font-weight:600">${g.desc}</div>
-        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${pp.map(p=>p.nombre).join(', ')} · ${g.fecha?new Date(g.fecha+'T12:00').toLocaleDateString('es-AR'):''}</div>
+        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${pp.map(p=>p.nombre).join(', ')}${fechaLabel?' &bull; '+fechaLabel:''}</div>
       </div>
       <span style="font-size:13px;font-weight:700;color:var(--yellow);font-family:var(--mono);white-space:nowrap;margin-left:8px">${fmt(total)}</span>
     </div>`;
-  }).join('')+
-  (pendientes.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">+${pendientes.length-5} gastos más</div>`:'')+
-  `<div class="btn-row" style="margin-top:10px;justify-content:flex-end"><button class="btn btn-sm" onclick="goTab('gastos')">Ver todos los gastos →</button></div>`;
+  }).join('')+(pendientes.length>5?`<div style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">+${pendientes.length-5} gastos mas</div>`:'');
 }
+
 
 // ── ABSA ──
 const LS_ABSA='lb_absa';

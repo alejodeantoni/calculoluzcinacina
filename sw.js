@@ -1,34 +1,48 @@
-const CACHE = 'luz-barrio-v4.1.0';
+const CACHE = 'luz-barrio-v4.2.2';
 const ASSETS = ['./', './index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
       .then(c => c.addAll(ASSETS))
-      .then(() => self.skipWaiting())
+      .then(() => self.skipWaiting())  // forzar activación inmediata
   );
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
-      .then(() => self.clients.claim())
+      .then(keys => Promise.all(
+        keys.filter(k => k !== CACHE).map(k => {
+          console.log('Borrando cache viejo:', k);
+          return caches.delete(k);
+        })
+      ))
+      .then(() => self.clients.claim())  // tomar control inmediato de todas las pestañas
+      .then(() => {
+        // Forzar reload en todos los clientes
+        return self.clients.matchAll({type:'window'});
+      })
+      .then(clients => {
+        clients.forEach(client => client.navigate(client.url));
+      })
   );
 });
 
 self.addEventListener('fetch', e => {
   if(e.request.method !== 'GET') return;
-  if(e.request.url.includes('jsonbin.io') || 
-     e.request.url.includes('fonts.googleapis.com') || 
-     e.request.url.includes('cdnjs.cloudflare.com') ||
-     e.request.url.includes('dolarapi.com') ||
-     e.request.url.includes('bluelytics.com')) return;
+  if(
+    e.request.url.includes('jsonbin.io') ||
+    e.request.url.includes('fonts.googleapis.com') ||
+    e.request.url.includes('cdnjs.cloudflare.com') ||
+    e.request.url.includes('dolarapi.com') ||
+    e.request.url.includes('bluelytics.com')
+  ) return;
 
-  // Siempre network-first para index.html — así siempre baja la última versión
+  // Siempre network-first para archivos core
   const url = new URL(e.request.url);
-  const isCore = url.pathname.endsWith('/') || 
-                 url.pathname.endsWith('index.html') || 
+  const isCore = url.pathname.endsWith('/') ||
+                 url.pathname.endsWith('index.html') ||
                  url.pathname.endsWith('sw.js') ||
                  url.pathname.endsWith('manifest.json');
 

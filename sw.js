@@ -1,4 +1,4 @@
-const CACHE = 'luz-barrio-v4.2.2';
+const CACHE = 'luz-barrio-v4.2.3';
 const ASSETS = ['./', './index.html', './manifest.json', './sw.js'];
 
 self.addEventListener('install', e => {

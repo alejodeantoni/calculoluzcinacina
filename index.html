@@ -204,7 +204,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="topbar-left">
     <div class="app-logo">🏘</div>
     <span class="app-title" id="app-title-display">Gastos Barrio</span>
-    <span class="app-version">v4.1.0</span>
+    <span class="app-version">v4.2.0</span>
   </div>
   <div class="topbar-right">
     <span class="sync-indicator" id="sync-indicator"></span>
@@ -528,8 +528,9 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
       <button class="chart-tab active" onclick="showChartSection('totales',this)">Factura total</button>
       <button class="chart-tab" onclick="showChartSection('kwh',this)">Consumo kWh</button>
       <button class="chart-tab" onclick="showChartSection('casas',this)">Por casa ($)</button>
-      <button class="chart-tab" onclick="showChartSection('consumo-casas',this)">Consumo kWh</button>
+      <button class="chart-tab" onclick="showChartSection('consumo-casas',this)">kWh por casa</button>
       <button class="chart-tab" onclick="showChartSection('dist',this)">Distribución</button>
+      <button class="chart-tab" onclick="showChartSection('aumentos',this)">&#128200; Aumentos</button>
     </div>
     <div class="chart-section active" id="csec-totales">
       <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:1rem">Factura total por mes ($)</div>
@@ -557,12 +558,30 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
         <div id="dist-legend" style="display:flex;flex-direction:column;gap:8px"></div>
       </div>
     </div>
+    <div class="chart-section" id="csec-aumentos"></div>
   </div>
   <div class="card" id="ranking-card">
     <div class="card-title">📊 Ranking acumulado de consumo</div>
     <div id="ranking-bars"></div>
   </div>
-</div>
+  <div class="card" id="aumentos-card" style="display:none">
+    <div class="card-title">
+      <span>📈 Variación entre períodos</span>
+    </div>
+    <!-- Selector de período a comparar -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+      <div class="field" style="min-width:140px;flex:1">
+        <label>Período base</label>
+        <select id="aum-desde" onchange="buildAumentos()" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);width:100%"></select>
+      </div>
+      <div style="font-size:18px;color:var(--text3);padding-top:18px">→</div>
+      <div class="field" style="min-width:140px;flex:1">
+        <label>Período a comparar</label>
+        <select id="aum-hasta" onchange="buildAumentos()" style="padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);color:var(--text);font-size:13px;font-family:var(--font);width:100%"></select>
+      </div>
+    </div>
+    <div id="aumentos-content"></div>
+  </div>
 
 <!-- ══ CONTACTOS ══ -->
 <div class="tab-pane" id="tab-contactos">
@@ -681,7 +700,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
   <div class="card">
     <div class="card-title">ℹ️ Acerca de</div>
     <div style="font-size:13px;color:var(--text2);line-height:2;font-family:var(--mono)">
-      <div>Versión: <strong style="color:var(--text)">v4.1.0</strong></div>
+      <div>Versión: <strong style="color:var(--text)">v4.2.0</strong></div>
       <div>App: <strong style="color:var(--text)">Calculadora de Luz — Barrio La Cinacina</strong></div>
       <div>Creada por: <strong style="color:var(--accent)">Alejo De Antoni</strong></div>
       <div>Tecnología: <strong style="color:var(--text)">PWA · HTML · CSS · JS</strong></div>
@@ -690,7 +709,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 </div>
 
 <footer class="footer">
-  <div>Creada por <strong>Alejo De Antoni</strong> · v4.1.0</div>
+  <div>Creada por <strong>Alejo De Antoni</strong> · v4.2.0</div>
   <div style="margin-top:4px;color:var(--text3)">Barrio La Cinacina · La Plata</div>
 </footer>
 
@@ -1162,6 +1181,11 @@ function showChartSection(name,btn){
   document.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
   document.getElementById('csec-'+name).classList.add('active');
   btn.classList.add('active');
+  const aumentosCard=document.getElementById('aumentos-card');
+  if(aumentosCard) aumentosCard.style.display=name==='aumentos'?'block':'none';
+  const rankingCard=document.getElementById('ranking-card');
+  if(rankingCard) rankingCard.style.display=name==='aumentos'?'none':'block';
+  if(name==='aumentos') buildAumentos();
 }
 function gcOpts(){
   const dark=document.documentElement.getAttribute('data-theme')!=='light';
@@ -1173,7 +1197,7 @@ function buildStats(){
     document.getElementById('stat-kpis').innerHTML='<div class="empty-state" style="grid-column:1/-1">No hay historial guardado todavía.<br>Calculá al menos un período para ver las estadísticas.</div>';
     document.getElementById('ranking-card').style.display='none';return;
   }
-  buildStatKPIs(sorted);buildChartTotales(sorted);buildChartKwh(sorted);buildChartCasas(sorted);buildChartConsumoCasas(sorted);buildChartDist(sorted);buildRanking(sorted);
+  buildStatKPIs(sorted);buildChartTotales(sorted);buildChartKwh(sorted);buildChartCasas(sorted);buildChartConsumoCasas(sorted);buildChartDist(sorted);buildRanking(sorted);buildAumentosSelectors(sorted);
 }
 function shortLabel(h){const[mes,anio]=h.label.split(' ');return mes.substring(0,3)+' '+anio.substring(2);}
 function buildStatKPIs(sorted){
@@ -2827,6 +2851,104 @@ function toggleAbsa(bodyId,chevId){
   if(!b) return;
   const open=b.classList.toggle('open');
   if(c) c.classList.toggle('open',open);
+}
+
+// ── AUMENTOS ──
+function buildAumentosSelectors(sorted){
+  const desde=document.getElementById('aum-desde');
+  const hasta=document.getElementById('aum-hasta');
+  if(!desde||!hasta) return;
+  desde.innerHTML='';hasta.innerHTML='';
+  sorted.forEach(h=>{
+    desde.innerHTML+=`<option value="${h.periodo}">${h.label}</option>`;
+    hasta.innerHTML+=`<option value="${h.periodo}">${h.label}</option>`;
+  });
+  // default: ante-último → último
+  if(sorted.length>=2){
+    desde.value=sorted[sorted.length-2].periodo;
+    hasta.value=sorted[sorted.length-1].periodo;
+  } else if(sorted.length===1){
+    desde.value=sorted[0].periodo;
+    hasta.value=sorted[0].periodo;
+  }
+}
+
+function buildAumentos(){
+  const cont=document.getElementById('aumentos-content');
+  if(!cont) return;
+  const desdeVal=document.getElementById('aum-desde').value;
+  const hastaVal=document.getElementById('aum-hasta').value;
+  const sorted=[...historial].sort((a,b)=>a.periodo.localeCompare(b.periodo));
+  const h1=sorted.find(h=>h.periodo===desdeVal);
+  const h2=sorted.find(h=>h.periodo===hastaVal);
+  if(!h1||!h2){cont.innerHTML='<div class="empty-state">Seleccioná dos períodos para comparar.</div>';return;}
+  if(h1.periodo===h2.periodo){cont.innerHTML='<div style="text-align:center;padding:1rem;color:var(--text3);font-size:13px">Seleccioná dos períodos distintos.</div>';return;}
+
+  const pct=(a,b)=>b>0?((a-b)/b*100):0;
+  const arrow=(p)=>p>0?'&#9650;':'&#9660;';
+  const color=(p)=>p>0?'var(--red)':'var(--green)';
+  const fmtPct=(p)=>`${p>0?'+':''}${p.toFixed(1)}%`;
+
+  // Componentes a comparar
+  const items=[
+    {label:'Total factura',        v1:h1.total_factura,        v2:h2.total_factura,        icon:'💰'},
+    {label:'Subtotal servicio',    v1:h1.subtotal_serv,        v2:h2.subtotal_serv,        icon:'⚡'},
+    {label:'Subtotal impuestos',   v1:h1.subtotal_imp,         v2:h2.subtotal_imp,         icon:'🏛'},
+    {label:'Alumbrado público',    v1:h1.tasa_ap,              v2:h2.tasa_ap,              icon:'💡'},
+    {label:'kWh facturados',       v1:h1.kwh_total,            v2:h2.kwh_total,            icon:'⚡', isKwh:true},
+    {label:'kWh reflectores',      v1:h1.kwh_reflec,           v2:h2.kwh_reflec,           icon:'🔦', isKwh:true},
+    {label:'Costo por kWh',        v1:h1.kwh_total>0?h1.subtotal_serv/h1.kwh_total:0, v2:h2.kwh_total>0?h2.subtotal_serv/h2.kwh_total:0, icon:'📊', isCosto:true},
+  ];
+
+  const rowsGlobal=items.map(item=>{
+    const p=pct(item.v2,item.v1);
+    const fmtVal=v=>item.isKwh?v.toFixed(1)+' kWh':item.isCosto?'$'+v.toFixed(2)+'/kWh':fmt(v);
+    return`<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:4px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:16px">${item.icon}</span>
+        <span style="font-size:13px;font-weight:600">${item.label}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;font-family:var(--mono)">
+        <span style="font-size:12px;color:var(--text3)">${fmtVal(item.v1)}</span>
+        <span style="font-size:12px;color:var(--text3)">→</span>
+        <span style="font-size:13px;font-weight:600">${fmtVal(item.v2)}</span>
+        <span style="font-size:13px;font-weight:700;color:${color(p)};min-width:60px;text-align:right">${arrow(p)} ${fmtPct(p)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Por casa: comparar lo que paga cada uno
+  const allCasas=[...new Set([...h1.resultados.map(r=>r.nombre),...h2.resultados.map(r=>r.nombre)])];
+  const rowsCasas=allCasas.map(nombre=>{
+    const r1=h1.resultados.find(r=>r.nombre===nombre);
+    const r2=h2.resultados.find(r=>r.nombre===nombre);
+    if(!r1||!r2) return '';
+    const p=pct(r2.total,r1.total);
+    const pkwh=pct(r2.kwh,r1.kwh);
+    return`<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;flex-wrap:wrap;gap:4px">
+        <span style="font-size:13px;font-weight:700">${nombre}</span>
+        <div style="display:flex;align-items:center;gap:10px;font-family:var(--mono)">
+          <span style="font-size:12px;color:var(--text3)">${fmt(r1.total)} → ${fmt(r2.total)}</span>
+          <span style="font-size:13px;font-weight:700;color:${color(p)}">${arrow(p)} ${fmtPct(p)}</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">
+        kWh: ${r1.kwh.toFixed(1)} → ${r2.kwh.toFixed(1)}
+        <span style="color:${color(pkwh)};font-weight:600;margin-left:6px">${arrow(pkwh)} ${fmtPct(pkwh)}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  cont.innerHTML=`
+    <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:14px;font-size:12px;color:var(--text2);font-family:var(--mono)">
+      Comparando <strong style="color:var(--text)">${h1.label}</strong> vs <strong style="color:var(--text)">${h2.label}</strong>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:6px">Componentes de la factura</div>
+    ${rowsGlobal}
+    <div style="font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin:14px 0 6px">Por casa</div>
+    ${rowsCasas}
+  `;
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
